@@ -46,7 +46,7 @@
 - [x] Author `HANDSHAKE.md` mapping all 9 Key Screens to REST endpoints, payloads, and client-side Soroban signing flows
 
 ## Phase 5: Technical Report, CI/CD Pipeline & Deployment
-- [x] Configure `render.yaml` Blueprint with dedicated paid PostgreSQL (`tumaride-db`, `0.5c-1g`)
+- [x] Configure `render.yaml` Blueprint with dedicated paid PostgreSQL (`tumaride-db`, `basic-256mb` / 0.1 CPU, 1 GB disk)
 - [x] Create GitHub Actions CI/CD pipeline (`.github/workflows/ci.yml`)
 - [x] Generate `TECHNICAL_REPORT.md` with Testnet contract ID, verifiable transaction hashes, explorer links, and test matrix
 - [x] Document local containerization in `LOCAL_DOCKER.md`

@@ -7,7 +7,7 @@ The **Tuma Ride** Backend & Soroban Delivery Escrow MVP is complete, tested, and
 - **Smart Contract (`contracts/delivery-escrow`):** Rust / `soroban-sdk` v28, compiled to **10,037 bytes** optimized WASM, deployed and initialized on Stellar Testnet.
 - **Backend API (`apps/backend`):** NestJS 10 + TypeScript + Prisma ORM (PostgreSQL 16) + SEP-0010 wallet authentication + Soroban RPC event indexer + Swagger `/docs`.
 - **Automated Test Coverage:** **27 / 27 passing** (**10** Soroban unit tests + **17** Backend end-to-end system & regression tests) plus production build & entrypoint smoke test.
-- **Cloud & Container Readiness:** Dedicated paid PostgreSQL (`tumaride-db`, `0.5c-1g`) in `render.yaml`, multi-stage `Dockerfile`, `docker-compose.yml`, and GitHub Actions CI.
+- **Cloud & Container Readiness:** Dedicated paid PostgreSQL (`tumaride-db`, `basic-256mb` / 0.1 CPU, 1 GB disk) in `render.yaml`, multi-stage `Dockerfile`, `docker-compose.yml`, and GitHub Actions CI.
 
 ---
 

@@ -28,7 +28,7 @@ Welcome to the **Tuma Ride** backend and smart contract workspace. This document
   - **Stellar Testnet Deployment**: WASM compilation, contract deployment, initialization, and live verifiable Testnet invocations.
   - **NestJS Backend API (`apps/backend`)**: SEP-0010 wallet challenge/verify authentication, Customer & Rider registration and role-based dashboards, Delivery Request lifecycle management, confirmation code generation & verification, activity/transaction history, and background Soroban RPC event indexer.
   - **PostgreSQL & Prisma ORM**: Off-chain profiles, delivery requests, status/activity timeline, cached escrow/payment states, and notifications.
-  - **Infrastructure**: Dedicated paid PostgreSQL (`tumaride-db`, `0.5c-1g`) in Render Blueprint (`render.yaml`), multi-stage Dockerization (`docker-compose.yml`), and GitHub Actions CI.
+  - **Infrastructure**: Dedicated paid PostgreSQL (`tumaride-db`, `basic-256mb` / 0.1 CPU, 1 GB disk) in Render Blueprint (`render.yaml`), multi-stage Dockerization (`docker-compose.yml`), and GitHub Actions CI.
 - **Frontend Scope (External / Handed Off to Frontend Team)**:
   - Maintained by the Frontend Engineer and UI/UX Designer.
   - We maintain `HANDSHAKE.md`, `packages/shared`, and interactive Swagger OpenAPI documentation at `/docs` as the authoritative integration contract for the frontend team.
@@ -47,7 +47,7 @@ Welcome to the **Tuma Ride** backend and smart contract workspace. This document
   - **Zero Private Key Custody**: The backend never accepts, generates, or stores customer or rider private keys. All transaction signing occurs client-side via Stellar Wallets Kit.
   - **Dual-State Reconciliation**: Off-chain queries are served from PostgreSQL and reconciled against confirmed on-chain events via the background Soroban RPC indexer.
   - **Database Migration Guard**: Any unattended `prisma db push` command must include `--accept-data-loss` in production startup scripts (`scripts/start-production.js`) to prevent non-interactive deployment aborts.
-  - **Render Cloud Deployment**: Provision dedicated paid PostgreSQL (`tumaride-db`, plan `0.5c-1g`) in `render.yaml`.
+  - **Render Cloud Deployment**: Provision dedicated paid PostgreSQL (`tumaride-db`, plan `basic-256mb` / 0.1 CPU, 1 GB disk) in `render.yaml`.
 - **API Documentation**:
   - Maintain interactive Swagger / OpenAPI 3.0 documentation at `/docs`.
 
