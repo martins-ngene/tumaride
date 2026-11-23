@@ -1,0 +1,152 @@
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+enum UserRole {
+  CUSTOMER
+  RIDER
+}
+
+enum DeliveryStatus {
+  CREATED
+  FUNDED
+  ASSIGNED
+  ACCEPTED
+  PICKED_UP
+  IN_TRANSIT
+  DELIVERED
+  CONFIRMED
+  CANCELLED
+  REFUNDED
+}
+
+enum EscrowStatus {
+  UNFUNDED
+  LOCKED
+  RELEASED
+  REFUNDED
+}
+
+enum EscrowTxType {
+  FUND
+  RELEASE
+  REFUND
+}
+
+model User {
+  id            String        @id @default(cuid())
+  walletAddress String        @unique
+  role          UserRole      @default(CUSTOMER)
+  fullName      String
+  phone         String?
+  email         String?
+  createdAt     DateTime      @default(now())
+  updatedAt     DateTime      @updatedAt
+
+  riderProfile        RiderProfile?
+  customerDeliveries  DeliveryRequest[] @relation("CustomerDeliveries")
+  riderDeliveries     DeliveryRequest[] @relation("RiderDeliveries")
+  activities          DeliveryActivity[]
+}
+
+model WalletNonce {
+  id            String   @id @default(cuid())
+  walletAddress String
+  nonce         String   @unique
+  message       String
+  expiresAt     DateTime
+  consumed      Boolean  @default(false)
+  createdAt     DateTime @default(now())
+
+  @@index([walletAddress])
+}
+
+model RiderProfile {
+  id                  String   @id @default(cuid())
+  userId              String   @unique
+  vehicleType         String   @default("Motorbike")
+  licensePlate        String?
+  isAvailable         Boolean  @default(true)
+  completedDeliveries Int      @default(0)
+  rating              Float    @default(5.0)
+  createdAt           DateTime @default(now())
+  updatedAt           DateTime @updatedAt
+
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+}
+
+model DeliveryRequest {
+  id                   String         @id @default(cuid())
+  onChainDeliveryId    BigInt         @unique
+  customerId           String
+  riderId              String?
+  pickupAddress        String
+  dropoffAddress       String
+  instructions         String?
+  feeUsdc              String
+  feeStroops           BigInt
+  status               DeliveryStatus @default(CREATED)
+  escrowStatus         EscrowStatus   @default(UNFUNDED)
+  confirmationCode     String
+  confirmationCodeHash String
+  fundTxHash           String?
+  releaseTxHash        String?
+  refundTxHash         String?
+  cancelReason         String?
+  createdAt            DateTime       @default(now())
+  updatedAt            DateTime       @updatedAt
+
+  customer     User                @relation("CustomerDeliveries", fields: [customerId], references: [id])
+  rider        User?               @relation("RiderDeliveries", fields: [riderId], references: [id])
+  activities   DeliveryActivity[]
+  transactions EscrowTransaction[]
+
+  @@index([customerId])
+  @@index([riderId])
+  @@index([status])
+}
+
+model DeliveryActivity {
+  id         String         @id @default(cuid())
+  deliveryId String
+  status     DeliveryStatus
+  actorId    String?
+  actorRole  UserRole?
+  note       String?
+  txHash     String?
+  createdAt  DateTime       @default(now())
+
+  delivery DeliveryRequest @relation(fields: [deliveryId], references: [id], onDelete: Cascade)
+  actor    User?           @relation(fields: [actorId], references: [id], onDelete: SetNull)
+
+  @@index([deliveryId])
+}
+
+model EscrowTransaction {
+  id             String       @id @default(cuid())
+  deliveryId     String
+  txType         EscrowTxType
+  txHash         String       @unique
+  amountStroops  BigInt
+  amountUsdc     String
+  fromWallet     String
+  toWallet       String
+  ledgerSequence Int?
+  createdAt      DateTime     @default(now())
+
+  delivery DeliveryRequest @relation(fields: [deliveryId], references: [id], onDelete: Cascade)
+
+  @@index([deliveryId])
+}
+
+model SyncState {
+  id            String   @id @default("soroban-indexer")
+  lastLedger    Int      @default(0)
+  lastCursor    String?
+  updatedAt     DateTime @updatedAt
+}

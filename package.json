@@ -1,0 +1,23 @@
+{
+  "name": "tumaride-mvp",
+  "version": "0.1.0",
+  "private": true,
+  "description": "Tuma Ride MVP - Delivery Management Platform with Soroban USDC Escrow on Stellar",
+  "workspaces": [
+    "packages/*",
+    "apps/*"
+  ],
+  "scripts": {
+    "build": "npm run build --workspaces --if-present",
+    "test": "npm run test --workspaces --if-present",
+    "contract:build": "export PATH=\"$HOME/.rustup/toolchains/stable-aarch64-apple-darwin/bin:$PATH\" && cd contracts/delivery-escrow && stellar contract build",
+    "contract:test": "cd contracts/delivery-escrow && cargo test -- --nocapture",
+    "backend:dev": "npm --prefix apps/backend run start:dev",
+    "backend:build": "npm --prefix apps/backend run build",
+    "backend:test": "npm --prefix apps/backend run test"
+  },
+  "devDependencies": {
+    "prettier": "^3.3.3",
+    "typescript": "^5.9.3"
+  }
+}

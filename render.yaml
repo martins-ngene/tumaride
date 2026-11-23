@@ -1,0 +1,44 @@
+databases:
+  - name: tumaride-db
+    databaseName: tumaride
+    user: tumaride_user
+    plan: 0.5c-1g
+    diskSizeGB: 15
+    postgresMajorVersion: "16"
+
+services:
+  - type: web
+    name: tumaride-backend
+    runtime: node
+    plan: free
+    region: oregon
+    rootDir: apps/backend
+    buildCommand: npm install && npx prisma generate && npm run build
+    startCommand: node scripts/start-production.js
+    healthCheckPath: /health
+    autoDeploy: true
+    envVars:
+      - key: NODE_ENV
+        value: production
+      - key: PORT
+        value: 10000
+      - key: API_PREFIX
+        value: api
+      - key: DATABASE_URL
+        fromDatabase:
+          name: tumaride-db
+          property: connectionString
+      - key: JWT_SECRET
+        generateValue: true
+      - key: STELLAR_NETWORK
+        value: TESTNET
+      - key: STELLAR_RPC_URL
+        value: https://soroban-testnet.stellar.org
+      - key: STELLAR_NETWORK_PASSPHRASE
+        value: "Test SDF Network ; September 2015"
+      - key: TUMARIDE_ESCROW_CONTRACT_ID
+        value: CB7KRT357CZNYU3XEPAX26SHM37QGJW75Z3RVUGRSKMFUOZSKLZQ7PJ4
+      - key: USDC_TOKEN_CONTRACT_ID
+        value: CBIMG76HIG2UJDRT65WZ6KQITSGQQ4G5ANA4LAEOQUYYES3TTVKOKQF6
+      - key: INDEXER_ENABLED
+        value: "true"
