@@ -1,46 +1,108 @@
-name: Tuma Ride CI
+name: Tuma Ride CI/CD Pipeline
 
 on:
   push:
-    branches: [main]
+    branches: [master, main]
   pull_request:
-    branches: [main]
+    branches: [master, main]
+  workflow_dispatch:
+
+concurrency:
+  group: ${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: true
 
 jobs:
-  soroban-contract:
-    name: Soroban Smart Contract Tests
+  smart-contract:
+    name: Soroban Delivery Escrow Contract (Tests & WASM Build)
     runs-on: ubuntu-latest
     steps:
-      - uses: actions/checkout@v4
-      - uses: dtolnay/rust-toolchain@stable
-      - name: Run Soroban Unit Tests
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: Install Rust toolchain & Soroban WASM targets
+        uses: dtolnay/rust-toolchain@stable
+        with:
+          targets: wasm32v1-none, wasm32-unknown-unknown
+
+      - name: Rust Cache
+        uses: Swatinem/rust-cache@v2
+        with:
+          workspaces: contracts
+
+      - name: Run Soroban Unit Tests (10 Scenarios)
         working-directory: contracts/delivery-escrow
-        run: cargo test -- --nocapture
+        run: cargo test --verbose
+
+      - name: Compile Optimized Soroban WASM
+        working-directory: contracts/delivery-escrow
+        run: cargo build --release --target wasm32v1-none
+
+      - name: Verify WASM Artifact Exists
+        run: |
+          WASM_PATH="contracts/target/wasm32v1-none/release/delivery_escrow.wasm"
+          if [ ! -f "$WASM_PATH" ]; then
+            echo "::error::Compiled WASM artifact missing at $WASM_PATH"
+            exit 1
+          fi
+          ls -lh "$WASM_PATH"
 
   backend-api:
-    name: Backend Build, Smoke & System Tests
+    name: Backend API Build, Smoke & Regression Tests (17 Tests)
     runs-on: ubuntu-latest
     steps:
-      - uses: actions/checkout@v4
-      - uses: actions/setup-node@v4
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
         with:
           node-version: 22
-      - name: Install Dependencies
-        run: npm install
-      - name: Build Shared Package
-        run: npm --prefix packages/shared run build
-      - name: Generate Prisma Client & Build Backend
-        run: npm --prefix apps/backend run prisma:generate && npm --prefix apps/backend run build
-      - name: Production Entrypoint Smoke Test
-        run: npm --prefix apps/backend run test:smoke
-      - name: Run System & Regression Test Suite
-        run: npm --prefix apps/backend run test
+          cache: 'npm'
+          cache-dependency-path: package-lock.json
 
-  docker-build:
-    name: Docker Image Build Verification
+      - name: Install Dependencies
+        run: npm ci
+
+      - name: Build Shared Types Package (@tumaride/shared)
+        run: npm --prefix packages/shared run build
+
+      - name: Validate Prisma Schema & Generate Client
+        working-directory: apps/backend
+        run: npx prisma validate && npx prisma generate
+
+      - name: Build NestJS Backend
+        run: npm --prefix apps/backend run build
+
+      - name: Pre-Flight Check — Verify Production Entrypoint
+        run: |
+          if [ ! -f apps/backend/dist/main.js ]; then
+            echo "::error::Critical deployment issue: apps/backend/dist/main.js is missing!"
+            ls -la apps/backend/dist/
+            exit 1
+          fi
+          echo "Verified dist/main.js production entrypoint exists."
+
+      - name: Run Production Entrypoint Smoke Test
+        run: node apps/backend/scripts/smoke-test.js
+
+      - name: Run End-to-End System & Regression Tests (17 Tests)
+        run: npm --prefix apps/backend test
+
+  docker-build-check:
+    name: Docker Container Validation
     runs-on: ubuntu-latest
-    needs: [backend-api]
+    needs: [smart-contract, backend-api]
     steps:
-      - uses: actions/checkout@v4
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: Set up Docker Buildx
+        uses: docker/setup-buildx-action@v3
+
       - name: Build Backend Docker Image
-        run: docker build -f apps/backend/Dockerfile -t tumaride-backend:ci .
+        uses: docker/build-push-action@v5
+        with:
+          context: .
+          file: apps/backend/Dockerfile
+          push: false
+          tags: tumaride-backend:ci-check
