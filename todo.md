@@ -124,14 +124,14 @@
 ## Remaining MVP Gaps
 
 ### Customer and rider workflows
-- [ ] Make the rider availability setting meaningful in the live flow. It already controls the customer’s rider list, but an unavailable rider can still accept a request. Enforce the same rule on acceptance or remove the acceptance implication from the UI.
-- [ ] Add a refresh action for the selected delivery and its activity timeline. Customers should see rider progress, and riders should see settlement after customer confirmation without reopening the whole workspace.
-- [ ] Document a repeatable two-wallet Freighter Testnet run, including the XLM and simulated USDC setup. Complete sign-in, create, fund, accept, pick up, deliver, and release in the browser. Verify funded cancellation/refund and recovery after leaving a transaction pending.
+- [x] Make the rider availability setting meaningful in the live flow. Enforced `riderProfile.isAvailable` on backend `POST /api/deliveries/:id/accept` (`403`), frontend escrow `prepare` route (`403`), and disabled acceptance in `LiveWorkspace` when unavailable.
+- [x] Add a refresh action for the selected delivery and its activity timeline in `LiveWorkspace` so customers see rider progress and riders see settlement without reopening the workspace.
+- [x] Document a repeatable two-wallet Freighter Testnet run (`TESTNET_DEMO_RUNBOOK.md`), execute live two-wallet Stellar Testnet E2E (`apps/backend/scripts/e2e-testnet.mjs`), record Playwright walkthrough video (`public/recordings/tumaride_full_flow_demo.webm`) + 19 state screenshots, and build the `/proof` observable showcase (`apps/frontend/app/proof/route.ts`).
 
 ### API and escrow release checks
-- [ ] Enforce delivery visibility in the backend. Allow the owning customer, assigned rider, and eligible riders browsing funded open requests.
-- [ ] Require verified Testnet proof in the backend before recording escrow actions. Remove synthetic release and refund hashes from the live path. Make API retries and indexer reconciliation agree on status, transaction history, and activity, including when the indexer sees the transaction first.
-- [ ] Confirm the backend auth and delivery regression suite is present and passes before release. The current checkout shows the previous system suite and mock Prisma files removed.
+- [x] Enforce delivery visibility in the backend (`GET /api/deliveries/:id` allows only owning customer, assigned rider, or eligible riders browsing funded open requests; `403` otherwise).
+- [x] Require verified Testnet proof in the backend before recording escrow actions (`BlockchainService.verifyEscrowAction` & `isRiderAssignedOnChain`), removed synthetic release/refund hashes, and aligned idempotent API retries with `IndexerService` event reconciliation (status, `EscrowTransaction`, `DeliveryActivity`, one-time `completedDeliveries`).
+- [x] Restored and expanded backend auth & delivery regression suite (`apps/backend/test/mock-prisma.ts` and `apps/backend/test/system.spec.ts` — 10/10 comprehensive multi-scenario tests passing).
 
 ### Outside this MVP
 Use Freighter sign-in, address-based discovery, manual delivery status updates,

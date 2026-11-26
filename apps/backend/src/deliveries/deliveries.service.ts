@@ -71,6 +71,47 @@ export class DeliveriesService {
     };
   }
 
+  private async upsertEscrowTransaction(data: {
+    deliveryId: string;
+    txType: EscrowTxType;
+    txHash: string;
+    amountStroops: bigint;
+    amountUsdc: string;
+    fromWallet: string;
+    toWallet: string;
+    ledgerSequence?: number;
+  }) {
+    await this.prisma.escrowTransaction.upsert({
+      where: { txHash: data.txHash },
+      update: {
+        ...(data.ledgerSequence !== undefined
+          ? { ledgerSequence: data.ledgerSequence }
+          : {}),
+      },
+      create: data,
+    });
+  }
+
+  private async ensureActivity(data: {
+    deliveryId: string;
+    status: DeliveryStatus;
+    actorId?: string | null;
+    actorRole?: UserRole | null;
+    note: string;
+    txHash?: string | null;
+  }) {
+    const existing = await this.prisma.deliveryActivity.findFirst({
+      where: {
+        deliveryId: data.deliveryId,
+        status: data.status,
+        ...(data.txHash ? { txHash: data.txHash } : {}),
+      },
+    });
+    if (!existing) {
+      await this.prisma.deliveryActivity.create({ data });
+    }
+  }
+
   async createDelivery(customerId: string, dto: CreateDeliveryDto) {
     const feeStroops = this.usdcToStroops(dto.feeUsdc);
     const { code, hash } = this.generateConfirmationCode();
@@ -79,12 +120,15 @@ export class DeliveriesService {
     if (dto.preferredRiderId) {
       const rider = await this.prisma.user.findUnique({
         where: { id: dto.preferredRiderId },
+        include: { riderProfile: true },
       });
       if (!rider || rider.role !== UserRole.RIDER) {
         throw new BadRequestException('Preferred rider not found');
       }
       if (rider.id === customerId) {
-        throw new BadRequestException('Customer cannot assign themselves as rider');
+        throw new BadRequestException(
+          'Customer cannot assign themselves as rider',
+        );
       }
     }
 
@@ -129,7 +173,7 @@ export class DeliveriesService {
     role: UserRole,
     filter?: { status?: DeliveryStatus; openOnly?: boolean },
   ) {
-    let where: any = {};
+    const where: any = {};
 
     if (role === UserRole.CUSTOMER) {
       where.customerId = userId;
@@ -160,7 +204,7 @@ export class DeliveriesService {
     return deliveries.map((d) => this.serialize(d, userId));
   }
 
-  async getDeliveryById(deliveryId: string, userId: string) {
+  async getDeliveryById(deliveryId: string, userId: string, role?: UserRole) {
     const delivery = await this.prisma.deliveryRequest.findUnique({
       where: { id: deliveryId },
       include: {
@@ -173,6 +217,19 @@ export class DeliveriesService {
 
     if (!delivery) {
       throw new NotFoundException('Delivery request not found');
+    }
+
+    const isOwner = delivery.customerId === userId;
+    const isAssignedRider = delivery.riderId === userId;
+    const isEligibleOpenBrowser =
+      role === UserRole.RIDER &&
+      delivery.riderId === null &&
+      delivery.status === DeliveryStatus.FUNDED;
+
+    if (!isOwner && !isAssignedRider && !isEligibleOpenBrowser) {
+      throw new ForbiddenException(
+        'You do not have permission to view this delivery request',
+      );
     }
 
     return this.serialize(delivery, userId);
@@ -192,53 +249,82 @@ export class DeliveriesService {
     if (delivery.customerId !== customerId) {
       throw new ForbiddenException('Only the customer can fund this delivery');
     }
-    if (delivery.escrowStatus !== EscrowStatus.UNFUNDED) {
-      throw new ConflictException('Delivery escrow is already funded or settled');
+
+    const proof = await this.blockchain.verifyEscrowAction({
+      txHash: dto.txHash,
+      action: 'fund',
+      onChainDeliveryId: delivery.onChainDeliveryId,
+      actorWallet: delivery.customer.walletAddress,
+      amountStroops: delivery.feeStroops,
+    });
+    if (!proof.verified) {
+      throw new BadRequestException(
+        proof.reason || 'Unable to verify escrow funding transaction on Stellar Testnet',
+      );
     }
 
     const nextStatus = delivery.riderId
       ? DeliveryStatus.ASSIGNED
       : DeliveryStatus.FUNDED;
 
-    const updated = await this.prisma.deliveryRequest.update({
+    // Idempotent retry or indexer-first reconciliation with the same verified txHash
+    if (delivery.escrowStatus !== EscrowStatus.UNFUNDED) {
+      if (delivery.fundTxHash === dto.txHash) {
+        await this.upsertEscrowTransaction({
+          deliveryId,
+          txType: EscrowTxType.FUND,
+          txHash: dto.txHash,
+          amountStroops: delivery.feeStroops,
+          amountUsdc: delivery.feeUsdc,
+          fromWallet: delivery.customer.walletAddress,
+          toWallet: this.blockchain.contractId || 'SOROBAN_ESCROW_CONTRACT',
+          ledgerSequence: proof.ledger,
+        });
+        await this.ensureActivity({
+          deliveryId,
+          status: nextStatus,
+          actorId: customerId,
+          actorRole: UserRole.CUSTOMER,
+          note: `Locked ${delivery.feeUsdc} USDC in Soroban escrow.`,
+          txHash: dto.txHash,
+        });
+        return this.getDeliveryById(deliveryId, customerId, UserRole.CUSTOMER);
+      }
+      throw new ConflictException(
+        'Delivery escrow is already funded or settled',
+      );
+    }
+
+    await this.prisma.deliveryRequest.update({
       where: { id: deliveryId },
       data: {
         status: nextStatus,
         escrowStatus: EscrowStatus.LOCKED,
         fundTxHash: dto.txHash,
       },
-      include: {
-        customer: true,
-        rider: { include: { riderProfile: true } },
-        activities: { orderBy: { createdAt: 'asc' } },
-        transactions: { orderBy: { createdAt: 'asc' } },
-      },
     });
 
-    await this.prisma.escrowTransaction.create({
-      data: {
-        deliveryId,
-        txType: EscrowTxType.FUND,
-        txHash: dto.txHash,
-        amountStroops: delivery.feeStroops,
-        amountUsdc: delivery.feeUsdc,
-        fromWallet: delivery.customer.walletAddress,
-        toWallet: this.blockchain.contractId || 'SOROBAN_ESCROW_CONTRACT',
-      },
+    await this.upsertEscrowTransaction({
+      deliveryId,
+      txType: EscrowTxType.FUND,
+      txHash: dto.txHash,
+      amountStroops: delivery.feeStroops,
+      amountUsdc: delivery.feeUsdc,
+      fromWallet: delivery.customer.walletAddress,
+      toWallet: this.blockchain.contractId || 'SOROBAN_ESCROW_CONTRACT',
+      ledgerSequence: proof.ledger,
     });
 
-    await this.prisma.deliveryActivity.create({
-      data: {
-        deliveryId,
-        status: nextStatus,
-        actorId: customerId,
-        actorRole: UserRole.CUSTOMER,
-        note: `Locked ${delivery.feeUsdc} USDC in Soroban escrow.`,
-        txHash: dto.txHash,
-      },
+    await this.ensureActivity({
+      deliveryId,
+      status: nextStatus,
+      actorId: customerId,
+      actorRole: UserRole.CUSTOMER,
+      note: `Locked ${delivery.feeUsdc} USDC in Soroban escrow.`,
+      txHash: dto.txHash,
     });
 
-    return this.getDeliveryById(deliveryId, customerId);
+    return this.getDeliveryById(deliveryId, customerId, UserRole.CUSTOMER);
   }
 
   async assignRider(
@@ -248,6 +334,7 @@ export class DeliveriesService {
   ) {
     const delivery = await this.prisma.deliveryRequest.findUnique({
       where: { id: deliveryId },
+      include: { customer: true },
     });
     if (!delivery) throw new NotFoundException('Delivery request not found');
     if (delivery.customerId !== customerId) {
@@ -263,9 +350,30 @@ export class DeliveriesService {
 
     const rider = await this.prisma.user.findUnique({
       where: { id: dto.riderId },
+      include: { riderProfile: true },
     });
     if (!rider || rider.role !== UserRole.RIDER) {
       throw new BadRequestException('Selected user is not a registered rider');
+    }
+
+    if (delivery.escrowStatus === EscrowStatus.LOCKED) {
+      if (!dto.txHash) {
+        throw new BadRequestException(
+          'A verified assign_rider Testnet transaction hash is required for funded deliveries',
+        );
+      }
+      const proof = await this.blockchain.verifyEscrowAction({
+        txHash: dto.txHash,
+        action: 'assign',
+        onChainDeliveryId: delivery.onChainDeliveryId,
+        actorWallet: delivery.customer.walletAddress,
+        riderWallet: rider.walletAddress,
+      });
+      if (!proof.verified) {
+        throw new BadRequestException(
+          proof.reason || 'Unable to verify assign_rider transaction on Stellar Testnet',
+        );
+      }
     }
 
     await this.prisma.deliveryRequest.update({
@@ -276,18 +384,16 @@ export class DeliveriesService {
       },
     });
 
-    await this.prisma.deliveryActivity.create({
-      data: {
-        deliveryId,
-        status: DeliveryStatus.ASSIGNED,
-        actorId: customerId,
-        actorRole: UserRole.CUSTOMER,
-        note: `Assigned rider ${rider.fullName}.`,
-        txHash: dto.txHash || null,
-      },
+    await this.ensureActivity({
+      deliveryId,
+      status: DeliveryStatus.ASSIGNED,
+      actorId: customerId,
+      actorRole: UserRole.CUSTOMER,
+      note: `Assigned rider ${rider.fullName}.`,
+      txHash: dto.txHash || null,
     });
 
-    return this.getDeliveryById(deliveryId, customerId);
+    return this.getDeliveryById(deliveryId, customerId, UserRole.CUSTOMER);
   }
 
   async acceptDelivery(
@@ -295,23 +401,81 @@ export class DeliveriesService {
     riderId: string,
     dto: AcceptDeliveryDto,
   ) {
-    const delivery = await this.prisma.deliveryRequest.findUnique({
-      where: { id: deliveryId },
-    });
+    const [delivery, rider] = await Promise.all([
+      this.prisma.deliveryRequest.findUnique({
+        where: { id: deliveryId },
+      }),
+      this.prisma.user.findUnique({
+        where: { id: riderId },
+        include: { riderProfile: true },
+      }),
+    ]);
+
     if (!delivery) throw new NotFoundException('Delivery request not found');
+    if (!rider || rider.role !== UserRole.RIDER) {
+      throw new ForbiddenException('Only registered riders can accept deliveries');
+    }
+
+    // Enforce rider availability consistently with customer rider discovery
+    if (rider.riderProfile && !rider.riderProfile.isAvailable) {
+      throw new ForbiddenException(
+        'Unavailable riders cannot accept delivery requests. Turn on availability in your rider profile first.',
+      );
+    }
+
     if (delivery.escrowStatus !== EscrowStatus.LOCKED) {
       throw new BadRequestException(
         'Delivery must be funded in Soroban escrow before acceptance',
       );
     }
     if (delivery.riderId && delivery.riderId !== riderId) {
-      throw new ConflictException('Delivery is already assigned to another rider');
+      throw new ConflictException(
+        'Delivery is already assigned to another rider',
+      );
     }
+
+    // Idempotent retry if the same rider already accepted this delivery
+    if (
+      delivery.riderId === riderId &&
+      delivery.status === DeliveryStatus.ACCEPTED
+    ) {
+      return this.getDeliveryById(deliveryId, riderId, UserRole.RIDER);
+    }
+
     if (
       delivery.status !== DeliveryStatus.FUNDED &&
       delivery.status !== DeliveryStatus.ASSIGNED
     ) {
-      throw new ConflictException('Delivery cannot be accepted in its current state');
+      throw new ConflictException(
+        'Delivery cannot be accepted in its current state',
+      );
+    }
+
+    // Verify on-chain assignment proof (either fresh assign_rider tx or pre-assigned on-chain state)
+    if (dto.txHash) {
+      const proof = await this.blockchain.verifyEscrowAction({
+        txHash: dto.txHash,
+        action: 'assign',
+        onChainDeliveryId: delivery.onChainDeliveryId,
+        actorWallet: rider.walletAddress,
+        riderWallet: rider.walletAddress,
+      });
+      if (!proof.verified) {
+        throw new BadRequestException(
+          proof.reason || 'Unable to verify rider acceptance transaction on Stellar Testnet',
+        );
+      }
+    } else {
+      const alreadyAssignedOnChain =
+        await this.blockchain.isRiderAssignedOnChain(
+          delivery.onChainDeliveryId,
+          rider.walletAddress,
+        );
+      if (!alreadyAssignedOnChain) {
+        throw new BadRequestException(
+          'A verified assign_rider Testnet transaction hash is required to accept this delivery',
+        );
+      }
     }
 
     await this.prisma.deliveryRequest.update({
@@ -322,18 +486,16 @@ export class DeliveriesService {
       },
     });
 
-    await this.prisma.deliveryActivity.create({
-      data: {
-        deliveryId,
-        status: DeliveryStatus.ACCEPTED,
-        actorId: riderId,
-        actorRole: UserRole.RIDER,
-        note: 'Rider accepted delivery request.',
-        txHash: dto.txHash || null,
-      },
+    await this.ensureActivity({
+      deliveryId,
+      status: DeliveryStatus.ACCEPTED,
+      actorId: riderId,
+      actorRole: UserRole.RIDER,
+      note: 'Rider accepted delivery request.',
+      txHash: dto.txHash || null,
     });
 
-    return this.getDeliveryById(deliveryId, riderId);
+    return this.getDeliveryById(deliveryId, riderId, UserRole.RIDER);
   }
 
   async updateDeliveryStatus(
@@ -346,7 +508,40 @@ export class DeliveriesService {
     });
     if (!delivery) throw new NotFoundException('Delivery request not found');
     if (delivery.riderId !== riderId) {
-      throw new ForbiddenException('Only the assigned rider can update delivery status');
+      throw new ForbiddenException(
+        'Only the assigned rider can update delivery status',
+      );
+    }
+
+    if (dto.status === DeliveryStatus.DELIVERED) {
+      if (!dto.txHash) {
+        throw new BadRequestException(
+          'A verified mark_delivered Testnet transaction hash is required to mark a delivery as DELIVERED',
+        );
+      }
+      const proof = await this.blockchain.verifyEscrowAction({
+        txHash: dto.txHash,
+        action: 'deliver',
+        onChainDeliveryId: delivery.onChainDeliveryId,
+      });
+      if (!proof.verified) {
+        throw new BadRequestException(
+          proof.reason || 'Unable to verify mark_delivered transaction on Stellar Testnet',
+        );
+      }
+
+      // Idempotent retry or indexer-first reconciliation for DELIVERED
+      if (delivery.status === DeliveryStatus.DELIVERED) {
+        await this.ensureActivity({
+          deliveryId,
+          status: DeliveryStatus.DELIVERED,
+          actorId: riderId,
+          actorRole: UserRole.RIDER,
+          note: dto.note || 'Delivery status updated to DELIVERED.',
+          txHash: dto.txHash,
+        });
+        return this.getDeliveryById(deliveryId, riderId, UserRole.RIDER);
+      }
     }
 
     const allowedTransitions: Record<string, DeliveryStatus[]> = {
@@ -374,18 +569,16 @@ export class DeliveriesService {
       data: { status: dto.status },
     });
 
-    await this.prisma.deliveryActivity.create({
-      data: {
-        deliveryId,
-        status: dto.status,
-        actorId: riderId,
-        actorRole: UserRole.RIDER,
-        note: dto.note || `Delivery status updated to ${dto.status}.`,
-        txHash: dto.txHash || null,
-      },
+    await this.ensureActivity({
+      deliveryId,
+      status: dto.status,
+      actorId: riderId,
+      actorRole: UserRole.RIDER,
+      note: dto.note || `Delivery status updated to ${dto.status}.`,
+      txHash: dto.txHash || null,
     });
 
-    return this.getDeliveryById(deliveryId, riderId);
+    return this.getDeliveryById(deliveryId, riderId, UserRole.RIDER);
   }
 
   async confirmDelivery(
@@ -399,21 +592,14 @@ export class DeliveriesService {
     });
     if (!delivery) throw new NotFoundException('Delivery request not found');
     if (delivery.customerId !== customerId) {
-      throw new ForbiddenException('Only the customer can confirm this delivery');
+      throw new ForbiddenException(
+        'Only the customer can confirm this delivery',
+      );
     }
 
-    // Duplicate settlement guard
-    if (
-      delivery.escrowStatus === EscrowStatus.RELEASED ||
-      delivery.escrowStatus === EscrowStatus.REFUNDED ||
-      delivery.status === DeliveryStatus.CONFIRMED
-    ) {
-      throw new ConflictException('Duplicate settlement rejected: delivery is already settled');
-    }
-
-    if (delivery.status !== DeliveryStatus.DELIVERED) {
+    if (!dto.releaseTxHash) {
       throw new BadRequestException(
-        'Rider must mark delivery as DELIVERED before customer confirmation',
+        'A verified confirm_and_release Testnet transaction hash is required',
       );
     }
 
@@ -426,16 +612,75 @@ export class DeliveriesService {
       throw new BadRequestException('Invalid delivery confirmation code');
     }
 
-    const releaseTxHash =
-      dto.releaseTxHash ||
-      `sim_release_${crypto.randomBytes(16).toString('hex')}`;
+    // Duplicate settlement guard vs idempotent retry / indexer-first reconciliation
+    if (
+      delivery.escrowStatus === EscrowStatus.RELEASED ||
+      delivery.escrowStatus === EscrowStatus.REFUNDED ||
+      delivery.status === DeliveryStatus.CONFIRMED
+    ) {
+      if (
+        delivery.escrowStatus === EscrowStatus.RELEASED &&
+        delivery.releaseTxHash === dto.releaseTxHash
+      ) {
+        const proof = await this.blockchain.verifyEscrowAction({
+          txHash: dto.releaseTxHash,
+          action: 'release',
+          onChainDeliveryId: delivery.onChainDeliveryId,
+        });
+        if (!proof.verified) {
+          throw new BadRequestException(
+            proof.reason || 'Unable to verify release transaction on Stellar Testnet',
+          );
+        }
+        await this.upsertEscrowTransaction({
+          deliveryId,
+          txType: EscrowTxType.RELEASE,
+          txHash: dto.releaseTxHash,
+          amountStroops: delivery.feeStroops,
+          amountUsdc: delivery.feeUsdc,
+          fromWallet: this.blockchain.contractId || 'SOROBAN_ESCROW_CONTRACT',
+          toWallet: delivery.rider?.walletAddress || 'RIDER_WALLET',
+          ledgerSequence: proof.ledger,
+        });
+        await this.ensureActivity({
+          deliveryId,
+          status: DeliveryStatus.CONFIRMED,
+          actorId: customerId,
+          actorRole: UserRole.CUSTOMER,
+          note: 'Customer confirmed delivery with unique code; Soroban escrow released to rider.',
+          txHash: dto.releaseTxHash,
+        });
+        return this.getDeliveryById(deliveryId, customerId, UserRole.CUSTOMER);
+      }
+
+      throw new ConflictException(
+        'Duplicate settlement rejected: delivery is already settled',
+      );
+    }
+
+    if (delivery.status !== DeliveryStatus.DELIVERED) {
+      throw new BadRequestException(
+        'Rider must mark delivery as DELIVERED before customer confirmation',
+      );
+    }
+
+    const proof = await this.blockchain.verifyEscrowAction({
+      txHash: dto.releaseTxHash,
+      action: 'release',
+      onChainDeliveryId: delivery.onChainDeliveryId,
+    });
+    if (!proof.verified) {
+      throw new BadRequestException(
+        proof.reason || 'Unable to verify confirm_and_release transaction on Stellar Testnet',
+      );
+    }
 
     await this.prisma.deliveryRequest.update({
       where: { id: deliveryId },
       data: {
         status: DeliveryStatus.CONFIRMED,
         escrowStatus: EscrowStatus.RELEASED,
-        releaseTxHash,
+        releaseTxHash: dto.releaseTxHash,
       },
     });
 
@@ -448,30 +693,27 @@ export class DeliveriesService {
         .catch(() => null);
     }
 
-    await this.prisma.escrowTransaction.create({
-      data: {
-        deliveryId,
-        txType: EscrowTxType.RELEASE,
-        txHash: releaseTxHash,
-        amountStroops: delivery.feeStroops,
-        amountUsdc: delivery.feeUsdc,
-        fromWallet: this.blockchain.contractId || 'SOROBAN_ESCROW_CONTRACT',
-        toWallet: delivery.rider?.walletAddress || 'RIDER_WALLET',
-      },
+    await this.upsertEscrowTransaction({
+      deliveryId,
+      txType: EscrowTxType.RELEASE,
+      txHash: dto.releaseTxHash,
+      amountStroops: delivery.feeStroops,
+      amountUsdc: delivery.feeUsdc,
+      fromWallet: this.blockchain.contractId || 'SOROBAN_ESCROW_CONTRACT',
+      toWallet: delivery.rider?.walletAddress || 'RIDER_WALLET',
+      ledgerSequence: proof.ledger,
     });
 
-    await this.prisma.deliveryActivity.create({
-      data: {
-        deliveryId,
-        status: DeliveryStatus.CONFIRMED,
-        actorId: customerId,
-        actorRole: UserRole.CUSTOMER,
-        note: 'Customer confirmed delivery with unique code; Soroban escrow released to rider.',
-        txHash: releaseTxHash,
-      },
+    await this.ensureActivity({
+      deliveryId,
+      status: DeliveryStatus.CONFIRMED,
+      actorId: customerId,
+      actorRole: UserRole.CUSTOMER,
+      note: 'Customer confirmed delivery with unique code; Soroban escrow released to rider.',
+      txHash: dto.releaseTxHash,
     });
 
-    return this.getDeliveryById(deliveryId, customerId);
+    return this.getDeliveryById(deliveryId, customerId, UserRole.CUSTOMER);
   }
 
   async cancelDelivery(
@@ -488,13 +730,52 @@ export class DeliveriesService {
       throw new ForbiddenException('Only the customer can cancel this delivery');
     }
 
+    // Duplicate settlement guard vs idempotent retry / indexer-first reconciliation
     if (
       delivery.escrowStatus === EscrowStatus.RELEASED ||
       delivery.escrowStatus === EscrowStatus.REFUNDED ||
       delivery.status === DeliveryStatus.CANCELLED ||
       delivery.status === DeliveryStatus.REFUNDED
     ) {
-      throw new ConflictException('Duplicate settlement rejected: delivery is already settled or cancelled');
+      if (
+        delivery.escrowStatus === EscrowStatus.REFUNDED &&
+        dto.refundTxHash &&
+        delivery.refundTxHash === dto.refundTxHash
+      ) {
+        const proof = await this.blockchain.verifyEscrowAction({
+          txHash: dto.refundTxHash,
+          action: 'refund',
+          onChainDeliveryId: delivery.onChainDeliveryId,
+        });
+        if (!proof.verified) {
+          throw new BadRequestException(
+            proof.reason || 'Unable to verify refund transaction on Stellar Testnet',
+          );
+        }
+        await this.upsertEscrowTransaction({
+          deliveryId,
+          txType: EscrowTxType.REFUND,
+          txHash: dto.refundTxHash,
+          amountStroops: delivery.feeStroops,
+          amountUsdc: delivery.feeUsdc,
+          fromWallet: this.blockchain.contractId || 'SOROBAN_ESCROW_CONTRACT',
+          toWallet: delivery.customer.walletAddress,
+          ledgerSequence: proof.ledger,
+        });
+        await this.ensureActivity({
+          deliveryId,
+          status: DeliveryStatus.REFUNDED,
+          actorId: customerId,
+          actorRole: UserRole.CUSTOMER,
+          note: `Delivery cancelled; ${delivery.feeUsdc} USDC refunded from Soroban escrow.`,
+          txHash: dto.refundTxHash,
+        });
+        return this.getDeliveryById(deliveryId, customerId, UserRole.CUSTOMER);
+      }
+
+      throw new ConflictException(
+        'Duplicate settlement rejected: delivery is already settled or cancelled',
+      );
     }
 
     const ineligibleStatuses = new Set<DeliveryStatus>([
@@ -508,6 +789,27 @@ export class DeliveriesService {
     }
 
     const wasFunded = delivery.escrowStatus === EscrowStatus.LOCKED;
+    let verifiedLedger: number | undefined;
+
+    if (wasFunded) {
+      if (!dto.refundTxHash) {
+        throw new BadRequestException(
+          'A verified cancel_and_refund Testnet transaction hash is required to cancel a funded delivery',
+        );
+      }
+      const proof = await this.blockchain.verifyEscrowAction({
+        txHash: dto.refundTxHash,
+        action: 'refund',
+        onChainDeliveryId: delivery.onChainDeliveryId,
+      });
+      if (!proof.verified) {
+        throw new BadRequestException(
+          proof.reason || 'Unable to verify cancel_and_refund transaction on Stellar Testnet',
+        );
+      }
+      verifiedLedger = proof.ledger;
+    }
+
     const nextStatus = wasFunded
       ? DeliveryStatus.REFUNDED
       : DeliveryStatus.CANCELLED;
@@ -515,48 +817,43 @@ export class DeliveriesService {
       ? EscrowStatus.REFUNDED
       : EscrowStatus.UNFUNDED;
 
-    const refundTxHash = wasFunded
-      ? dto.refundTxHash || `sim_refund_${crypto.randomBytes(16).toString('hex')}`
-      : null;
-
     await this.prisma.deliveryRequest.update({
       where: { id: deliveryId },
       data: {
         status: nextStatus,
         escrowStatus: nextEscrowStatus,
         cancelReason: dto.reason || 'Cancelled by customer',
-        ...(refundTxHash ? { refundTxHash } : {}),
+        ...(wasFunded && dto.refundTxHash
+          ? { refundTxHash: dto.refundTxHash }
+          : {}),
       },
     });
 
-    if (wasFunded && refundTxHash) {
-      await this.prisma.escrowTransaction.create({
-        data: {
-          deliveryId,
-          txType: EscrowTxType.REFUND,
-          txHash: refundTxHash,
-          amountStroops: delivery.feeStroops,
-          amountUsdc: delivery.feeUsdc,
-          fromWallet: this.blockchain.contractId || 'SOROBAN_ESCROW_CONTRACT',
-          toWallet: delivery.customer.walletAddress,
-        },
+    if (wasFunded && dto.refundTxHash) {
+      await this.upsertEscrowTransaction({
+        deliveryId,
+        txType: EscrowTxType.REFUND,
+        txHash: dto.refundTxHash,
+        amountStroops: delivery.feeStroops,
+        amountUsdc: delivery.feeUsdc,
+        fromWallet: this.blockchain.contractId || 'SOROBAN_ESCROW_CONTRACT',
+        toWallet: delivery.customer.walletAddress,
+        ledgerSequence: verifiedLedger,
       });
     }
 
-    await this.prisma.deliveryActivity.create({
-      data: {
-        deliveryId,
-        status: nextStatus,
-        actorId: customerId,
-        actorRole: UserRole.CUSTOMER,
-        note: wasFunded
-          ? `Delivery cancelled; ${delivery.feeUsdc} USDC refunded from Soroban escrow.`
-          : 'Unfunded delivery request cancelled.',
-        txHash: refundTxHash,
-      },
+    await this.ensureActivity({
+      deliveryId,
+      status: nextStatus,
+      actorId: customerId,
+      actorRole: UserRole.CUSTOMER,
+      note: wasFunded
+        ? `Delivery cancelled; ${delivery.feeUsdc} USDC refunded from Soroban escrow.`
+        : 'Unfunded delivery request cancelled.',
+      txHash: wasFunded ? dto.refundTxHash || null : null,
     });
 
-    return this.getDeliveryById(deliveryId, customerId);
+    return this.getDeliveryById(deliveryId, customerId, UserRole.CUSTOMER);
   }
 
   async getTransactionHistory(userId: string) {

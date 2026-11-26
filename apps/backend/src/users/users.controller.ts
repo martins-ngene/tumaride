@@ -37,8 +37,13 @@ export class UsersController {
   @Get('riders')
   @ApiOperation({ summary: 'List registered riders (filterable by availability)' })
   @ApiQuery({ name: 'available', required: false, type: Boolean })
-  listRiders(@Query('available') available?: string) {
-    const onlyAvailable = available !== 'false';
+  @ApiQuery({ name: 'onlyAvailable', required: false, type: Boolean })
+  listRiders(
+    @Query('available') available?: string,
+    @Query('onlyAvailable') onlyAvailableQuery?: string,
+  ) {
+    const onlyAvailable =
+      available !== 'false' && onlyAvailableQuery !== 'false';
     return this.usersService.listAvailableRiders(onlyAvailable);
   }
 

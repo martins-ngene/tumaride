@@ -1,0 +1,421 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Tuma Ride — Observable Product Proof &amp; Interactive Walkthrough</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Manrope:wght@400;500;600;700;800&family=JetBrains+Mono:wght@400;500;600&display=swap" rel="stylesheet">
+  <style>
+    :root {
+      --bg: #080c12;
+      --card: #111824;
+      --card-hover: #172132;
+      --border: #1f2d42;
+      --border-accent: #2f4668;
+      --brand: #10b981;
+      --brand-glow: rgba(16, 185, 129, 0.25);
+      --accent: #38bdf8;
+      --text: #f1f5f9;
+      --muted: #94a3b8;
+      --warn: #f59e0b;
+    }
+    * { box-sizing: border-box; margin: 0; padding: 0; }
+    html { scroll-behavior: smooth; background: var(--bg); }
+    body {
+      font-family: 'Manrope', -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
+      background: radial-gradient(circle at 50% 0%, #102438 0%, var(--bg) 55%);
+      color: var(--text);
+      min-height: 100vh;
+      padding: 0 20px 80px;
+      line-height: 1.55;
+    }
+    .container { max-width: 1280px; margin: 0 auto; }
+
+    /* Nav */
+    .top-nav {
+      display: flex; justify-content: space-between; align-items: center;
+      padding: 22px 0; border-bottom: 1px solid var(--border); gap: 16px; flex-wrap: wrap;
+    }
+    .nav-brand {
+      display: flex; align-items: center; gap: 12px;
+      text-decoration: none; color: var(--text); font-weight: 800; font-size: 20px; letter-spacing: -0.02em;
+    }
+    .brand-badge {
+      width: 34px; height: 34px; border-radius: 10px;
+      background: linear-gradient(135deg, var(--brand), var(--accent));
+      display: grid; place-items: center; color: #051218; font-weight: 800; font-size: 16px;
+      box-shadow: 0 0 18px var(--brand-glow);
+    }
+    .nav-links { display: flex; align-items: center; gap: 12px; flex-wrap: wrap; }
+    .status-pill {
+      display: inline-flex; align-items: center; gap: 8px;
+      padding: 6px 14px; border-radius: 9999px;
+      background: rgba(16, 185, 129, 0.12); border: 1px solid rgba(16, 185, 129, 0.35);
+      font-family: 'JetBrains Mono', monospace; font-size: 12px; color: var(--brand); font-weight: 600;
+    }
+    .pulse {
+      width: 8px; height: 8px; border-radius: 50%; background: var(--brand);
+      box-shadow: 0 0 10px var(--brand); animation: pulse 2s infinite;
+    }
+    @keyframes pulse { 0%, 100% { opacity: 1; } 50% { opacity: 0.35; } }
+    .nav-btn {
+      padding: 8px 14px; border-radius: 8px; background: var(--card); border: 1px solid var(--border);
+      color: var(--text); text-decoration: none; font-size: 13px; font-weight: 600; transition: all .2s;
+    }
+    .nav-btn:hover { border-color: var(--brand); background: var(--card-hover); }
+    .nav-btn.primary { background: var(--brand); color: #051218; border-color: var(--brand); }
+    .nav-btn.primary:hover { background: #34d399; }
+
+    /* Hero */
+    .hero { padding: 48px 0 32px; text-align: center; max-width: 860px; margin: 0 auto; }
+    .hero h1 { font-size: clamp(28px, 4.5vw, 46px); font-weight: 800; letter-spacing: -0.03em; margin-bottom: 14px; }
+    .hero h1 span { color: var(--brand); }
+    .hero p { color: var(--muted); font-size: 16px; }
+
+    /* Metrics */
+    .metrics {
+      display: grid; grid-template-columns: repeat(auto-fit, minmax(220px, 1fr));
+      gap: 16px; margin: 28px 0 44px;
+    }
+    .metric-card {
+      background: var(--card); border: 1px solid var(--border); border-radius: 14px; padding: 20px;
+    }
+    .metric-card small { color: var(--muted); font-size: 12px; text-transform: uppercase; letter-spacing: 0.06em; font-weight: 600; }
+    .metric-card strong { display: block; font-size: 28px; font-weight: 800; margin-top: 6px; color: var(--text); }
+    .metric-card p { font-size: 13px; color: var(--brand); margin-top: 4px; font-family: 'JetBrains Mono', monospace; }
+
+    /* Sections */
+    section { margin-bottom: 56px; }
+    .section-head { display: flex; justify-content: space-between; align-items: flex-end; gap: 16px; flex-wrap: wrap; margin-bottom: 20px; }
+    .section-head h2 { font-size: 24px; font-weight: 800; letter-spacing: -0.02em; }
+    .section-head p { color: var(--muted); font-size: 14px; margin-top: 4px; }
+
+    /* Video */
+    .video-shell {
+      background: var(--card); border: 1px solid var(--border); border-radius: 16px;
+      overflow: hidden; box-shadow: 0 24px 60px rgba(0, 0, 0, 0.45);
+    }
+    .video-bar {
+      display: flex; justify-content: space-between; align-items: center; padding: 12px 18px;
+      border-bottom: 1px solid var(--border); font-family: 'JetBrains Mono', monospace; font-size: 12px; color: var(--muted);
+    }
+    .video-shell video { width: 100%; display: block; background: #000; max-height: 760px; }
+
+    /* Proof Table */
+    .table-wrap {
+      background: var(--card); border: 1px solid var(--border); border-radius: 14px; overflow-x: auto;
+    }
+    table { width: 100%; border-collapse: collapse; font-size: 14px; }
+    th, td { padding: 13px 16px; text-align: left; border-bottom: 1px solid var(--border); }
+    th { color: var(--muted); font-size: 12px; text-transform: uppercase; letter-spacing: 0.05em; background: rgba(255,255,255,0.02); }
+    tr:last-child td { border-bottom: none; }
+    code { font-family: 'JetBrains Mono', monospace; font-size: 12px; color: var(--accent); }
+    .badge {
+      display: inline-block; padding: 3px 9px; border-radius: 999px; font-size: 11px; font-weight: 700;
+      font-family: 'JetBrains Mono', monospace;
+    }
+    .badge.ok { background: rgba(16, 185, 129, 0.14); color: var(--brand); }
+    .badge.guard { background: rgba(245, 158, 11, 0.14); color: var(--warn); }
+    .tx-link { color: var(--accent); text-decoration: none; font-family: 'JetBrains Mono', monospace; font-size: 12px; }
+    .tx-link:hover { text-decoration: underline; }
+
+    /* Filters & Gallery */
+    .filters { display: flex; gap: 8px; flex-wrap: wrap; }
+    .filter-btn {
+      padding: 7px 14px; border-radius: 999px; background: var(--card); border: 1px solid var(--border);
+      color: var(--muted); font-size: 13px; font-weight: 600; cursor: pointer; transition: all .2s;
+    }
+    .filter-btn.active, .filter-btn:hover { background: var(--brand); color: #051218; border-color: var(--brand); }
+    .gallery {
+      display: grid; grid-template-columns: repeat(auto-fill, minmax(340px, 1fr)); gap: 20px;
+    }
+    .shot-card {
+      background: var(--card); border: 1px solid var(--border); border-radius: 14px; overflow: hidden;
+      cursor: pointer; transition: transform .2s, border-color .2s;
+    }
+    .shot-card:hover { transform: translateY(-3px); border-color: var(--brand); }
+    .shot-card img { width: 100%; height: 215px; object-fit: cover; object-position: top; display: block; background: #05080d; }
+    .shot-meta { padding: 14px 16px; }
+    .shot-top { display: flex; justify-content: space-between; align-items: center; gap: 8px; margin-bottom: 6px; }
+    .shot-num { font-family: 'JetBrains Mono', monospace; font-size: 11px; color: var(--brand); font-weight: 600; }
+    .shot-cat { font-size: 11px; color: var(--muted); background: rgba(255,255,255,0.05); padding: 2px 8px; border-radius: 999px; }
+    .shot-meta h3 { font-size: 15px; font-weight: 700; margin-bottom: 4px; }
+    .shot-meta p { font-size: 13px; color: var(--muted); }
+
+    /* Lightbox */
+    .lightbox {
+      position: fixed; inset: 0; background: rgba(4, 7, 12, 0.92); backdrop-filter: blur(8px);
+      display: none; align-items: center; justify-content: center; z-index: 999; padding: 24px;
+    }
+    .lightbox.open { display: flex; }
+    .lightbox-inner { max-width: 1180px; width: 100%; text-align: center; }
+    .lightbox-inner img { max-width: 100%; max-height: 78vh; border-radius: 12px; border: 1px solid var(--border-accent); }
+    .lightbox-caption { margin-top: 14px; font-size: 15px; font-weight: 600; }
+    .lightbox-controls { margin-top: 14px; display: flex; justify-content: center; gap: 12px; }
+    .lb-btn {
+      padding: 8px 16px; border-radius: 8px; background: var(--card); border: 1px solid var(--border);
+      color: var(--text); cursor: pointer; font-weight: 600;
+    }
+    .lb-btn:hover { border-color: var(--brand); }
+  </style>
+</head>
+<body>
+  <div class="container">
+    <nav class="top-nav">
+      <a class="nav-brand" href="/">
+        <span class="brand-badge">TR</span>
+        <span>Tuma Ride <span style="color:var(--muted);font-weight:500">/ Proof</span></span>
+      </a>
+      <div class="nav-links">
+        <span class="status-pill"><span class="pulse"></span>STELLAR TESTNET · LIVE VERIFIED</span>
+        <a class="nav-btn" href="https://tumaride-backend.onrender.com/docs" target="_blank" rel="noreferrer">Swagger API ↗</a>
+        <a class="nav-btn" href="https://github.com/martins-ngene/tumaride" target="_blank" rel="noreferrer">GitHub ↗</a>
+        <a class="nav-btn primary" href="/">Launch App →</a>
+      </div>
+    </nav>
+
+    <header class="hero">
+      <h1>Observable Product Proof &amp; <span>Stellar Testnet</span> Verification</h1>
+      <p>
+        End-to-end walkthrough video, captured UI states across Customer and Rider workspaces, automated smart-contract &amp; API regression suites, and independently verifiable Soroban USDC escrow transaction hashes on Stellar Testnet.
+      </p>
+    </header>
+
+    <div class="metrics">
+      <div class="metric-card">
+        <small>Automated Test Suites</small>
+        <strong>20 / 20 Passing</strong>
+        <p>10 Soroban + 10 Backend E2E</p>
+      </div>
+      <div class="metric-card">
+        <small>Live Testnet E2E Flows</small>
+        <strong>6 Verified Txs</strong>
+        <p>Lock · Accept · Deliver · Release · Refund</p>
+      </div>
+      <div class="metric-card">
+        <small>Captured UI States</small>
+        <strong>19 Screenshots</strong>
+        <p>Desktop + Mobile + Swagger</p>
+      </div>
+      <div class="metric-card">
+        <small>Security Guards Verified</small>
+        <strong>403 / 409 / #12</strong>
+        <p>Visibility · Availability · No Double Spend</p>
+      </div>
+    </div>
+
+    <section id="walkthrough">
+      <div class="section-head">
+        <div>
+          <h2>Full Product Walkthrough Recording</h2>
+          <p>Automated Playwright capture across onboarding, Customer dashboard, delivery creation, escrow history, Rider jobs, availability settings, and live Swagger docs.</p>
+        </div>
+        <a class="nav-btn" href="/recordings/tumaride_full_flow_demo.webm" download>Download .webm ↓</a>
+      </div>
+      <div class="video-shell">
+        <div class="video-bar">
+          <span>tumaride_full_flow_demo.webm · 1440×900</span>
+          <span>Live Local Next.js + NestJS + PostgreSQL + Stellar Testnet</span>
+        </div>
+        <video controls preload="metadata" poster="/recordings/screenshots/04_customer_dashboard_overview.png">
+          <source src="/recordings/tumaride_full_flow_demo.webm" type="video/webm">
+          Your browser does not support WebM video playback.
+        </video>
+      </div>
+    </section>
+
+    <section id="onchain">
+      <div class="section-head">
+        <div>
+          <h2>Independently Verifiable Stellar Testnet Proofs</h2>
+          <p>Executed live with two real funded Testnet wallets (Customer + Rider) against deployed Soroban Delivery Escrow contract.</p>
+        </div>
+        <a class="nav-btn" href="https://stellar.expert/explorer/testnet/contract/CB7KRT357CZNYU3XEPAX26SHM37QGJW75Z3RVUGRSKMFUOZSKLZQ7PJ4" target="_blank" rel="noreferrer">View Escrow Contract ↗</a>
+      </div>
+      <div class="table-wrap">
+        <table>
+          <thead>
+            <tr>
+              <th>Stage</th>
+              <th>Operation</th>
+              <th>Result</th>
+              <th>Verifiable Stellar Expert Link</th>
+            </tr>
+          </thead>
+          <tbody>
+            <tr>
+              <td>Contract</td>
+              <td>Soroban Delivery Escrow (<code>delivery_escrow.wasm</code>, 10,037 bytes)</td>
+              <td><span class="badge ok">DEPLOYED</span></td>
+              <td><a class="tx-link" href="https://stellar.expert/explorer/testnet/contract/CB7KRT357CZNYU3XEPAX26SHM37QGJW75Z3RVUGRSKMFUOZSKLZQ7PJ4" target="_blank" rel="noreferrer">CB7KRT35...KLZQ7PJ4 ↗</a></td>
+            </tr>
+            <tr>
+              <td>Token</td>
+              <td>Simulated USDC Stellar Asset Contract (SAC)</td>
+              <td><span class="badge ok">DEPLOYED</span></td>
+              <td><a class="tx-link" href="https://stellar.expert/explorer/testnet/contract/CBIMG76HIG2UJDRT65WZ6KQITSGQQ4G5ANA4LAEOQUYYES3TTVKOKQF6" target="_blank" rel="noreferrer">CBIMG76H...TTVKOKQF6 ↗</a></td>
+            </tr>
+            <tr>
+              <td>Delivery A</td>
+              <td>Lock 12.00 USDC in Soroban Escrow (<code>fund_escrow</code>) + Idempotent Retry</td>
+              <td><span class="badge ok">LOCKED</span></td>
+              <td><a class="tx-link" href="https://stellar.expert/explorer/testnet/tx/7538c9fe31cf59eb8184f2c91841ebe811c8dae256720f663d33676caa433ab3" target="_blank" rel="noreferrer">7538c9fe...aa433ab3 ↗</a></td>
+            </tr>
+            <tr>
+              <td>Delivery A</td>
+              <td>Rider Availability Check (<code>403</code> offline) + Accept (<code>assign_rider</code>)</td>
+              <td><span class="badge ok">ACCEPTED</span></td>
+              <td><a class="tx-link" href="https://stellar.expert/explorer/testnet/tx/e6e183292fbff41c6ad43010446bd4c520b0c9aefd8a8e7bfc7ee01bd9dd7dcc" target="_blank" rel="noreferrer">e6e18329...d9dd7dcc ↗</a></td>
+            </tr>
+            <tr>
+              <td>Delivery A</td>
+              <td>Rider Marks Delivery Completed (<code>mark_delivered</code>)</td>
+              <td><span class="badge ok">DELIVERED</span></td>
+              <td><a class="tx-link" href="https://stellar.expert/explorer/testnet/tx/ac84c0f12e26719753ff8e8f88f4daa3f8345e1244e1011466c485d4c47f4e0d" target="_blank" rel="noreferrer">ac84c0f1...c47f4e0d ↗</a></td>
+            </tr>
+            <tr>
+              <td>Delivery A</td>
+              <td>Customer Confirms Unique Code &amp; Releases 12.00 USDC (<code>confirm_and_release</code>)</td>
+              <td><span class="badge ok">RELEASED</span></td>
+              <td><a class="tx-link" href="https://stellar.expert/explorer/testnet/tx/8440d9518acfe9584a5938fa515980e7cc403bb95f7950a097ecc5e9f20d3fc4" target="_blank" rel="noreferrer">8440d951...f20d3fc4 ↗</a></td>
+            </tr>
+            <tr>
+              <td>Guard</td>
+              <td>Duplicate Settlement Attempt on Settled Delivery</td>
+              <td><span class="badge guard">REJECTED 409 / #12</span></td>
+              <td><code>EscrowError::AlreadySettled</code> + API <code>409 Conflict</code></td>
+            </tr>
+            <tr>
+              <td>Delivery B</td>
+              <td>Lock 8.00 USDC in Soroban Escrow (<code>fund_escrow</code>)</td>
+              <td><span class="badge ok">LOCKED</span></td>
+              <td><a class="tx-link" href="https://stellar.expert/explorer/testnet/tx/0ab252c5a940d50ac77a08c45e7739f4b3adda1ade75c8315ad38d8f4dceb1a3" target="_blank" rel="noreferrer">0ab252c5...4dceb1a3 ↗</a></td>
+            </tr>
+            <tr>
+              <td>Delivery B</td>
+              <td>Eligible Cancellation &amp; Full 8.00 USDC Refund (<code>cancel_and_refund</code>)</td>
+              <td><span class="badge ok">REFUNDED</span></td>
+              <td><a class="tx-link" href="https://stellar.expert/explorer/testnet/tx/915802120e49fa072f29accea840be37a2722b06053d23a3ceca7c58229d8075" target="_blank" rel="noreferrer">91580212...229d8075 ↗</a></td>
+            </tr>
+          </tbody>
+        </table>
+      </div>
+    </section>
+
+    <section id="gallery">
+      <div class="section-head">
+        <div>
+          <h2>Captured State Screenshots (19 States)</h2>
+          <p>Click any screenshot to inspect full-size in the lightbox.</p>
+        </div>
+        <div class="filters" id="filters">
+          <button class="filter-btn active" data-cat="all">All (19)</button>
+          <button class="filter-btn" data-cat="onboarding">Onboarding</button>
+          <button class="filter-btn" data-cat="customer">Customer</button>
+          <button class="filter-btn" data-cat="rider">Rider</button>
+          <button class="filter-btn" data-cat="escrow">Escrow &amp; API</button>
+        </div>
+      </div>
+      <div class="gallery" id="galleryGrid"></div>
+    </section>
+  </div>
+
+  <div class="lightbox" id="lightbox">
+    <div class="lightbox-inner">
+      <img id="lbImg" src="" alt="">
+      <div class="lightbox-caption" id="lbCap"></div>
+      <div class="lightbox-controls">
+        <button class="lb-btn" id="lbPrev">← Previous</button>
+        <button class="lb-btn" id="lbClose">Close (Esc)</button>
+        <button class="lb-btn" id="lbNext">Next →</button>
+      </div>
+    </div>
+  </div>
+
+  <script>
+    const shots = [
+      { n: '01', cat: 'onboarding', file: '01_onboarding_splash.png', title: 'Onboarding Splash & Welcome', desc: 'Initial landing screen introducing Tuma Ride delivery & Soroban escrow.' },
+      { n: '02', cat: 'onboarding', file: '02_onboarding_role_selection.png', title: 'Role Selection (Customer vs Rider)', desc: 'Role-aware onboarding step separating Customer and Rider accounts.' },
+      { n: '03', cat: 'onboarding', file: '03_onboarding_wallet_auth.png', title: 'Freighter Wallet Auth & Registration', desc: 'Non-custodial Stellar SEP-53 wallet authentication entry.' },
+      { n: '04', cat: 'customer', file: '04_customer_dashboard_overview.png', title: 'Customer Dashboard Overview', desc: 'Live KPI summary (total deliveries, in progress, settled USDC) and recent requests.' },
+      { n: '05', cat: 'customer', file: '05_customer_create_delivery_form.png', title: 'Create Delivery Request Form', desc: 'Pickup, drop-off, instructions, USDC fee, and available riders selector.' },
+      { n: '06', cat: 'customer', file: '06_customer_created_delivery_code_and_fund.png', title: 'Unique Confirmation Code & Fund Escrow', desc: 'Generated TUMA-XXXXXX code visible only to customer, with Fund escrow action.' },
+      { n: '07', cat: 'customer', file: '07_customer_my_deliveries_list.png', title: 'Customer My Deliveries', desc: 'Searchable and status-filterable delivery history.' },
+      { n: '08', cat: 'customer', file: '08_customer_confirmed_delivery_timeline.png', title: 'Confirmed Delivery & Full Activity Timeline', desc: 'Complete lifecycle timeline from Created through Funded, Delivered, and Confirmed.' },
+      { n: '09', cat: 'customer', file: '09_customer_delivery_refreshed_state.png', title: 'Selected-Delivery Refresh Action', desc: 'One-click Refresh button updating selected delivery & activity timeline in place.' },
+      { n: '10', cat: 'escrow', file: '10_customer_refunded_delivery_detail.png', title: 'Eligible Cancellation & Refunded Escrow', desc: 'Verified refunded delivery state with returned USDC escrow status.' },
+      { n: '11', cat: 'escrow', file: '11_customer_wallet_escrow_history.png', title: 'Customer Wallet & Escrow History', desc: 'Live Stellar Testnet contract reference and verified FUND, RELEASE, and REFUND txs.' },
+      { n: '12', cat: 'customer', file: '12_customer_profile_settings.png', title: 'Customer Profile & Settings', desc: 'Authenticated customer account management.' },
+      { n: '13', cat: 'rider', file: '13_rider_dashboard_overview.png', title: 'Rider Dashboard Overview', desc: 'Live rider earnings (USDC), completed count, and job history.' },
+      { n: '14', cat: 'rider', file: '14_rider_find_deliveries.png', title: 'Rider Find Deliveries', desc: 'Open funded delivery requests available for eligible riders.' },
+      { n: '15', cat: 'rider', file: '15_rider_my_jobs_and_timeline.png', title: 'Rider My Jobs & Timeline (Code Hidden)', desc: 'Assigned job details with Refresh control and customer confirmation code redacted.' },
+      { n: '16', cat: 'escrow', file: '16_rider_earnings_wallet.png', title: 'Rider Earnings & Testnet Payouts', desc: 'Verified Stellar Testnet RELEASE payout transactions with Explorer links.' },
+      { n: '17', cat: 'rider', file: '17_rider_profile_availability.png', title: 'Rider Profile & Availability Control', desc: 'Vehicle details and Available for requests toggle enforced on acceptance.' },
+      { n: '18', cat: 'escrow', file: '18_swagger_openapi_docs.png', title: 'Interactive Swagger / OpenAPI Docs', desc: 'Live REST API specification at /docs covering Auth, Users, Deliveries, and Blockchain.' },
+      { n: '19', cat: 'customer', file: '19_mobile_responsive_dashboard.png', title: 'Mobile Responsive Layout (390×844)', desc: 'Verified responsive mobile dashboard layout.' }
+    ];
+
+    let activeCat = 'all';
+    let currentList = shots;
+    let currentIdx = 0;
+
+    const grid = document.getElementById('galleryGrid');
+    const lb = document.getElementById('lightbox');
+    const lbImg = document.getElementById('lbImg');
+    const lbCap = document.getElementById('lbCap');
+
+    function render() {
+      currentList = activeCat === 'all' ? shots : shots.filter(s => s.cat === activeCat);
+      grid.innerHTML = currentList.map((s, idx) => `
+        <article class="shot-card" data-idx="${idx}">
+          <img src="/recordings/screenshots/${s.file}" alt="${s.title}" loading="lazy">
+          <div class="shot-meta">
+            <div class="shot-top">
+              <span class="shot-num">#${s.n}</span>
+              <span class="shot-cat">${s.cat}</span>
+            </div>
+            <h3>${s.title}</h3>
+            <p>${s.desc}</p>
+          </div>
+        </article>
+      `).join('');
+      grid.querySelectorAll('.shot-card').forEach(card => {
+        card.addEventListener('click', () => openLb(Number(card.dataset.idx)));
+      });
+    }
+
+    function openLb(idx) {
+      currentIdx = idx;
+      const s = currentList[currentIdx];
+      lbImg.src = `/recordings/screenshots/${s.file}`;
+      lbImg.alt = s.title;
+      lbCap.textContent = `#${s.n} — ${s.title}: ${s.desc}`;
+      lb.classList.add('open');
+    }
+
+    document.getElementById('filters').addEventListener('click', (e) => {
+      const btn = e.target.closest('.filter-btn');
+      if (!btn) return;
+      document.querySelectorAll('.filter-btn').forEach(b => b.classList.remove('active'));
+      btn.classList.add('active');
+      activeCat = btn.dataset.cat;
+      render();
+    });
+
+    document.getElementById('lbClose').onclick = () => lb.classList.remove('open');
+    document.getElementById('lbPrev').onclick = () => openLb((currentIdx - 1 + currentList.length) % currentList.length);
+    document.getElementById('lbNext').onclick = () => openLb((currentIdx + 1) % currentList.length);
+    lb.addEventListener('click', (e) => { if (e.target === lb) lb.classList.remove('open'); });
+    document.addEventListener('keydown', (e) => {
+      if (!lb.classList.contains('open')) return;
+      if (e.key === 'Escape') lb.classList.remove('open');
+      if (e.key === 'ArrowLeft') openLb((currentIdx - 1 + currentList.length) % currentList.length);
+      if (e.key === 'ArrowRight') openLb((currentIdx + 1) % currentList.length);
+    });
+
+    render();
+  </script>
+</body>
+</html>

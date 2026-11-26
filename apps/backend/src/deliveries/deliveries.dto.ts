@@ -105,12 +105,12 @@ export class ConfirmDeliveryDto {
   @IsNotEmpty()
   confirmationCode: string;
 
-  @ApiPropertyOptional({
-    description: 'On-chain confirm_and_release txHash signed by customer',
+  @ApiProperty({
+    description: 'Verified on-chain confirm_and_release txHash signed by customer',
   })
-  @IsOptional()
   @IsString()
-  releaseTxHash?: string;
+  @IsNotEmpty()
+  releaseTxHash: string;
 }
 
 export class CancelDeliveryDto {

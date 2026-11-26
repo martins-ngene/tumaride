@@ -80,7 +80,26 @@ The **Tuma Ride** Backend & Soroban Delivery Escrow MVP is complete, tested, and
 
 ---
 
-## 4. Project Brief Definition of Done Verification
+## 4. Live Two-Wallet Full-Stack E2E Proof (Nov 26, 2026)
+
+Executed via `apps/backend/scripts/e2e-testnet.mjs` against real Stellar Testnet Soroban RPC, real PostgreSQL, and NestJS API (verifying SEP-53 auth, unfunded visibility `403`, offline rider acceptance `403`, idempotent pending-tx recovery `201`, and duplicate settlement `409 Conflict`):
+
+| Stage | Operation | Verifiable Stellar Expert Transaction |
+| --- | --- | --- |
+| Delivery A (12 USDC) | `fund_escrow` + idempotent retry | [`7538c9fe...aa433ab3`](https://stellar.expert/explorer/testnet/tx/7538c9fe31cf59eb8184f2c91841ebe811c8dae256720f663d33676caa433ab3) |
+| Delivery A (12 USDC) | Availability guard (`403`) + `assign_rider` | [`e6e18329...d9dd7dcc`](https://stellar.expert/explorer/testnet/tx/e6e183292fbff41c6ad43010446bd4c520b0c9aefd8a8e7bfc7ee01bd9dd7dcc) |
+| Delivery A (12 USDC) | `PICKED_UP` -> `IN_TRANSIT` -> `mark_delivered` | [`ac84c0f1...c47f4e0d`](https://stellar.expert/explorer/testnet/tx/ac84c0f12e26719753ff8e8f88f4daa3f8345e1244e1011466c485d4c47f4e0d) |
+| Delivery A (12 USDC) | `confirm_and_release` + idempotent retry + `409` dup guard | [`8440d951...f20d3fc4`](https://stellar.expert/explorer/testnet/tx/8440d9518acfe9584a5938fa515980e7cc403bb95f7950a097ecc5e9f20d3fc4) |
+| Delivery B (8 USDC) | `fund_escrow` | [`0ab252c5...4dceb1a3`](https://stellar.expert/explorer/testnet/tx/0ab252c5a940d50ac77a08c45e7739f4b3adda1ade75c8315ad38d8f4dceb1a3) |
+| Delivery B (8 USDC) | Eligible `cancel_and_refund` | [`91580212...229d8075`](https://stellar.expert/explorer/testnet/tx/915802120e49fa072f29accea840be37a2722b06053d23a3ceca7c58229d8075) |
+
+- **Observable Proof Showcase:** `/proof` (`apps/frontend/app/proof/route.ts` + `apps/frontend/public/recordings/index.html`)
+- **Walkthrough Video:** `apps/frontend/public/recordings/tumaride_full_flow_demo.webm`
+- **State Screenshots:** 19 captured screenshots in `apps/frontend/public/recordings/screenshots/`
+
+---
+
+## 5. Project Brief Definition of Done Verification
 
 - [x] Customers and riders can register and access their role-based dashboards.
 - [x] A customer can create a delivery request with pickup, drop-off, instructions, and fee.

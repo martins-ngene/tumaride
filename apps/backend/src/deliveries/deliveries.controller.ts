@@ -73,7 +73,11 @@ export class DeliveriesController {
     summary: 'Get delivery details, activity timeline, and escrow payment status',
   })
   getOne(@Param('id') id: string, @Req() req: any) {
-    return this.deliveriesService.getDeliveryById(id, req.user.sub);
+    return this.deliveriesService.getDeliveryById(
+      id,
+      req.user.sub,
+      req.user.role,
+    );
   }
 
   @Post(':id/fund')

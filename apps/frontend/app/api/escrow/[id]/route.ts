@@ -33,10 +33,18 @@ function acceptedOnChain(rpc: SorobanRpc.Server, intent: EscrowIntent) {
   });
 }
 
-async function matchesOnChain(rpc: SorobanRpc.Server, hash: string, intent: EscrowIntent) {
-  const result = await rpc.getTransaction(hash);
-  if (result.status !== SorobanRpc.Api.GetTransactionStatus.SUCCESS) return false;
-  return matchesEscrowEnvelope(result.envelopeXdr.toXDR("base64"), hash, intent);
+async function matchesOnChain(rpcUrl: string, hash: string, intent: EscrowIntent) {
+  const res = await fetch(rpcUrl, {
+    method: "POST",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify({ jsonrpc: "2.0", id: 1, method: "getTransaction", params: { hash } }),
+    cache: "no-store",
+  });
+  if (!res.ok) return false;
+  const payload = await res.json().catch(() => null);
+  const result = payload?.result;
+  if (result?.status !== "SUCCESS" || typeof result?.envelopeXdr !== "string") return false;
+  return matchesEscrowEnvelope(result.envelopeXdr, hash, intent);
 }
 
 export async function POST(request: Request, { params }: { params: Promise<{ id: string }> }) {
@@ -60,6 +68,9 @@ export async function POST(request: Request, { params }: { params: Promise<{ id:
     if (!account) return authError("Could not verify the wallet session.", 401);
     if (!detail.ok) return authError("Couldn’t load the delivery.", detail.status === 404 ? 404 : 502);
     const delivery = await detail.json() as Delivery;
+    if (action === "accept" && account.role === "RIDER" && account.riderAvailable === false) {
+      return authError("Unavailable riders cannot accept delivery requests. Enable availability in Profile & settings first.", 403);
+    }
     const { allowed, done } = decide(action, delivery, account.id, account.role === "RIDER", riderId);
     if (!allowed && !done) return authError("This escrow action is unavailable for the current delivery state.", 409);
     if (config.status !== "available") return authError("Stellar Testnet configuration is unavailable.", 503);
@@ -97,8 +108,8 @@ export async function POST(request: Request, { params }: { params: Promise<{ id:
       return done ? authError("This action is already recorded. Refresh the delivery.", 409) : authResponse({ intent });
     }
     if (intent.needsSignature) {
-      const matches = txHash && (await matchesOnChain(rpc, txHash, intent) ||
-        (done && action === "fund" && intent.rider && await matchesOnChain(rpc, txHash, { ...intent, rider: undefined })));
+      const matches = txHash && (await matchesOnChain(config.rpcUrl, txHash, intent) ||
+        (done && action === "fund" && intent.rider && await matchesOnChain(config.rpcUrl, txHash, { ...intent, rider: undefined })));
       if (!matches) return authError("A matching successful Testnet transaction is required.", 409);
     }
     if (done) return authResponse({ recorded: true });

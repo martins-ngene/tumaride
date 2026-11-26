@@ -182,7 +182,14 @@ export function LiveWorkspace({ screen, account, config }: { screen: Screen; acc
         }
       })}><span><strong>{item.pickup} → {item.dropoff}</strong><small>{date(item.date)}</small></span><span>{amount(item.fee)} USDC</span><span>{label(item.status)}</span></button>)}
     </Panel>}
-    {selected && <Panel><div className={css.heading}><h2>Delivery details</h2><button type="button" onClick={() => setSelected(undefined)}>Close</button></div>
+    {selected && <Panel><div className={css.heading}><h2>Delivery details</h2><div>
+      <button type="button" disabled={busy} onClick={() => run(async () => {
+        await loadDetail(selected.id);
+        refresh();
+        setNotice("Delivery details refreshed.");
+      })}>Refresh</button>{" "}
+      <button type="button" onClick={() => setSelected(undefined)}>Close</button>
+    </div></div>
       <p>{selected.pickup} → {selected.dropoff}</p><p>{amount(selected.fee)} USDC · {label(selected.status)} · Escrow {label(selected.escrow).toLowerCase()}</p>
       <p>On-chain delivery ID {selected.chainId}</p>
       {selected.rider && <p>Rider {selected.rider}</p>}
@@ -199,7 +206,9 @@ export function LiveWorkspace({ screen, account, config }: { screen: Screen; acc
           <button type="button" disabled={busy || !riderChoice} onClick={() => executeEscrow({ action: "assign", riderId: riderChoice })}>Assign rider</button>
         </div>}
         {rider && selected.escrow === "LOCKED" && (!selected.riderId || selected.riderId === account.id) && ["FUNDED", "ASSIGNED"].includes(selected.status) &&
-          <button type="button" disabled={busy} onClick={() => executeEscrow({ action: "accept" })}>Accept delivery</button>}
+          (account.riderAvailable === false
+            ? <p role="status">Turn on availability in Rider profile &amp; settings to accept deliveries.</p>
+            : <button type="button" disabled={busy} onClick={() => executeEscrow({ action: "accept" })}>Accept delivery</button>)}
         {rider && selected.riderId === account.id && selected.escrow === "LOCKED" && selected.status === "IN_TRANSIT" &&
           <button type="button" disabled={busy} onClick={() => executeEscrow({ action: "deliver" })}>Mark delivered</button>}
         {!rider && selected.escrow === "LOCKED" && selected.status === "DELIVERED" &&
