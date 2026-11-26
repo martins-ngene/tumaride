@@ -66,9 +66,18 @@ export class AuthService {
     const messageBuf = Buffer.from(challenge.message, 'utf8');
     const signatureBuf = Buffer.from(dto.signature, 'base64');
 
+    const sep53Digest = crypto
+      .createHash('sha256')
+      .update('Stellar Signed Message:\n', 'utf8')
+      .update(messageBuf)
+      .digest();
+
     let isValid = false;
     try {
-      isValid = keypair.verify(messageBuf, signatureBuf);
+      isValid =
+        signatureBuf.length === 64 &&
+        (keypair.verify(sep53Digest, signatureBuf) ||
+          keypair.verify(messageBuf, signatureBuf));
     } catch {
       isValid = false;
     }
@@ -77,10 +86,15 @@ export class AuthService {
       throw new UnauthorizedException('Invalid Stellar wallet signature');
     }
 
-    await this.prisma.walletNonce.update({
-      where: { id: challenge.id },
+    const consumed = await this.prisma.walletNonce.updateMany({
+      where: { id: challenge.id, consumed: false, expiresAt: { gt: new Date() } },
       data: { consumed: true },
     });
+    if (consumed.count !== 1) {
+      throw new UnauthorizedException(
+        'Authentication challenge expired or was already consumed',
+      );
+    }
 
     let user = await this.prisma.user.findUnique({
       where: { walletAddress: dto.walletAddress },

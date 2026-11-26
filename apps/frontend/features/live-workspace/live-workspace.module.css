@@ -1,0 +1,19 @@
+.workspace { display: grid; gap: 18px; }
+.heading,.filters { display: flex; justify-content: space-between; align-items: center; flex-wrap: wrap; gap: 12px; }
+.heading h1 { font-size: clamp(28px, 4vw, 40px); font-weight: 800; line-height: 1.15; letter-spacing: -.04em; }
+.heading > div > p { color: #14633f; text-transform: uppercase; font-size: 10px; letter-spacing: .12em; font-weight: 800; }
+.panel { display: grid; gap: 10px; min-width: 0; padding: 18px; border: 1px solid #dde6df; border-radius: 14px; background: white; }
+.panel h2 { font-size: 16px; font-weight: 800; }
+.metrics { display: grid; grid-template-columns: repeat(3,minmax(0,1fr)); gap: 12px; }
+.metrics strong { font-size: 24px; }
+.panel form { display: grid; gap: 12px; max-width: 520px; }
+.panel label { display: grid; gap: 4px; font-weight: 700; }
+.workspace input,.workspace select,.workspace textarea { padding: 7px 10px; border: 1px solid #dde6df; border-radius: 8px; background: #f7faf8; font-weight: 400; }
+.workspace .checkbox { display: flex; align-items: center; }
+.workspace button:not(.row),.heading > a { justify-self: start; border-radius: 8px; padding: 7px 12px; background: #14633f; color: white; font-weight: 700; font-size: 12px; }
+.workspace button:disabled { opacity: .6; }
+.panel > a,.row a { color: #14633f; text-decoration: underline; }
+.row { display: flex; gap: 12px; justify-content: space-between; align-items: center; flex-wrap: wrap; text-align: left; border-top: 1px solid #edf1ee; padding: 10px 0; }
+.row small { color: #66756d; display: block; }
+.row > span:first-child { flex: 1 1 180px; }
+@media(max-width: 550px) { .metrics { grid-template-columns: 1fr; } }

@@ -1,0 +1,57 @@
+@import "tailwindcss";
+
+@theme {
+  --color-primary-green: #1e8a5a;
+  --color-deep-green: #14633f;
+  --color-forest: #123d2b;
+  --color-mint-tint: #e3f1e8;
+  --color-canvas: #f3f6f3;
+  --color-surface: #ffffff;
+  --color-border: #e4ebe5;
+  --color-field-border: #dde6df;
+  --color-ink: #10231a;
+  --color-body-ink: #3f5446;
+  --color-muted: #5f7366;
+  --color-on-forest: #bfd9ca;
+  --color-warning-fill: #fff6dd;
+  --color-warning-text: #7a5a00;
+  --color-chip-amber: #fff3d6;
+  --color-field-fill: #fafcfa;
+
+  --text-display: 1.875rem;
+  --text-display--line-height: 1.2;
+  --text-display--font-weight: 800;
+  --text-hero: 1.375rem;
+  --text-hero--line-height: 1.3;
+  --text-hero--font-weight: 800;
+  --text-stat-sm: 1.25rem;
+  --text-stat-sm--line-height: 1.2;
+  --text-stat-sm--font-weight: 800;
+  --text-stat-lg: 1.625rem;
+  --text-stat-lg--line-height: 1.2;
+  --text-stat-lg--font-weight: 800;
+  --text-card-title: 0.9375rem;
+  --text-card-title--line-height: 1.4;
+  --text-card-title--font-weight: 700;
+  --text-body: 0.8125rem;
+  --text-body--line-height: 1.5;
+  --text-body--font-weight: 500;
+  --text-helper: 0.75rem;
+  --text-helper--line-height: 1.5;
+  --text-helper--font-weight: 500;
+  --text-eyebrow: 0.625rem;
+  --text-eyebrow--line-height: 1.4;
+  --text-eyebrow--font-weight: 700;
+}
+
+@theme inline {
+  --font-sans: var(--font-manrope), sans-serif;
+  --color-background: var(--color-canvas);
+  --color-foreground: var(--color-ink);
+}
+
+@layer base {
+  body {
+    @apply bg-background font-sans text-body text-body-ink;
+  }
+}

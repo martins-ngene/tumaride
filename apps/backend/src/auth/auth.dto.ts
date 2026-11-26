@@ -39,7 +39,7 @@ export class WalletVerifyDto {
 
   @ApiProperty({
     description:
-      'Base64-encoded Ed25519 signature of the challenge message signed by the Stellar wallet',
+      'Base64 Ed25519 signature of the SEP-53 challenge digest or the raw UTF-8 challenge',
   })
   @IsString()
   @IsNotEmpty()

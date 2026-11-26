@@ -1,0 +1,208 @@
+.intro, .role, .account, .ready, .splash {
+  --entry-paper: #f7f8f3;
+  --entry-ink: #14231d;
+  --entry-green: #1f8a5b;
+  --entry-muted: #65716b;
+  --entry-mint: #edf6ef;
+  min-height: 100svh;
+  color: var(--entry-ink);
+  font-family: var(--font-dm-sans), sans-serif;
+  font-weight: 400;
+}
+
+.intro *, .role *, .account *, .ready *, .splash * { box-sizing: border-box; }
+.intro :where(h1, p), .role :where(h1, p), .account :where(h1, h2, p),
+.ready :where(h1, p), .splash :where(h1, p) { margin: 0; }
+.intro img, .role img, .account img, .ready img, .splash img { display: block; max-width: none; }
+.intro button, .role button, .account button, .ready button { cursor: pointer; font-family: inherit; }
+.account button:disabled { cursor: wait; }
+.intro button:focus-visible, .role button:focus-visible, .account :is(button,input):focus-visible,
+.ready button:focus-visible { outline: 2px solid #36ad79; outline-offset: 3px; }
+.intro h1, .role h1, .account :is(h1,h2), .ready h1, .splash { font-family: var(--font-manrope), sans-serif; }
+
+.header { display: flex; justify-content: space-between; align-items: center; }
+.intro > .header, .role > .header { width: min(100%, 1280px); margin-inline: auto; padding: 0 48px; height: 94px; }
+.brand, .navButton { display: flex; align-items: center; }
+.brand { gap: 10px; font-size: 21px; letter-spacing: -.945px; font-weight: 700; }
+.brand img { width: 32.5px; height: 32.5px; object-fit: contain; border-radius: 9px; background: var(--entry-green); transform: rotate(-6deg); }
+.brand span span, .signInLink button { color: var(--entry-green); }
+.navButton { gap: 8px; padding: 8px 0; border: 0; background: transparent; color: #56635d; font-size: 14px; font-weight: 600; }
+
+.navButton img { transform: scaleX(-1); }
+
+.eyebrow { font-family: var(--font-manrope), sans-serif; font-size: 12px; line-height: 18px; font-weight: 800; letter-spacing: 1.68px; text-transform: uppercase; color: var(--entry-green); }
+.primary {
+  display: inline-flex; align-items: center; justify-content: center; gap: 12px;
+  height: 52px; padding: 0 23px; border: 0; border-radius: 12px;
+  color: white; background: var(--entry-green); font-size: 15px; line-height: 1.5; font-weight: 700;
+  box-shadow: 0 8px 18px #1f8a5b26;
+}
+.primary:hover { background: #14633f; }
+
+.intro { display: flex; flex-direction: column; background: var(--entry-paper); }
+.introContent {
+  display: grid; grid-template-columns: 40% 60%; align-items: center; width: min(100%, 1280px);
+  margin: 0 auto; padding: 10px 48px 80px;
+}
+.introCopy { z-index: 1; min-width: 0; }
+.introCopy h1 { margin: 20px 0 26px; font-size: clamp(42px, 5vw, 62.4px); font-weight: 700; line-height: 1.025; letter-spacing: -.055em; }
+.introCopy h1 span { display: block; }
+.introCopy .eyebrow { margin-top: 1px; }
+.introDescription { color: var(--entry-muted); font-size: 17px; line-height: 28.9px; max-width: 461px; }
+.introActions { display: flex; align-items: center; gap: 30px; margin-top: 34px; }
+.pagination { display: flex; gap: 7px; }
+.pagination button { display: grid; place-items: center; height: 32px; padding: 0; background: none; border: 0; }
+.pagination button span { width: 7px; height: 7px; border-radius: 20px; background: #c9d3cb; }
+.pagination button[aria-current] span { width: 28px; background: var(--entry-green); }
+.introArtwork { position: relative; container-type: inline-size; aspect-ratio: 691.203 / 600; }
+.introStage { position: absolute; inset: 0 auto auto 0; width: 691.203px; height: 600px; transform-origin: top left; transform: scale(calc(100cqw / 691.203px)); }
+.blob { position: absolute; inset: 0; }
+.introPath { position: absolute; top: 170px; left: 125px; transform: rotate(56.19deg) skewX(.93deg); }
+.pin { position: absolute; width: 31px; height: 31px; display: grid; place-items: center; border-radius: 14px 14px 14px 0; background: white; transform: rotate(-45deg); box-shadow: 0 6px 9px #2d4f3e2e; z-index: 1; }
+.pin > span { width: 7.5px; height: 7.5px; border-radius: 50%; background: var(--entry-green); }
+.startPin { left: 50px; top: 164px; }
+.endPin { left: 580px; top: 396px; }
+.endPin::before { content: ""; z-index: -1; position: absolute; inset: -11px; border-radius: 50%; background: #f2c94ca6; }
+.endPin::after { content: ""; position: absolute; z-index: -1; inset: 0; border-radius: inherit; background: white; }
+.endPin > span { background: #f2c94c; }
+.introBike, .accountBike {
+  position: absolute; display: grid; place-items: center; background: #183c2d;
+  border: 6px solid #ffffffe0; border-radius: 48px;
+}
+.introBike { top: 177px; left: 267px; width: 104px; height: 105px; transform: rotate(22.22deg) skewX(.69deg); }
+.deliveryCard {
+  position: absolute; display: flex; align-items: center; gap: 13px; padding: 15px 17px;
+  width: 393px; border-radius: 17px; min-height: 74px; background: #fffffff0;
+  box-shadow: 0 20px 45px #2d4f3e29; color: #21352c;
+}
+.introStage .deliveryCard { top: 433px; left: 123px; }
+.introArtwork[data-frame="152"] .deliveryCard { top: 403px; }
+.packageIcon { display: grid; place-items: center; width: 44px; height: 44px; border-radius: 11px; background: var(--entry-mint); }
+.deliveryCard small, .deliveryCard strong { display: block; }
+.deliveryCard small { color: #859089; font-size: 10px; line-height: 15px; }
+.deliveryCard strong { font-size: 12px; line-height: 18px; }
+.liveDot { margin-left: auto; width: 12px; height: 12px; border: 3px solid #d7f5e6; background: #27bd73; border-radius: 50%; }
+.paymentCard {
+  position: absolute; left: 198px; top: 211px; width: 297px; min-height: 190px; padding: 24px;
+  border-radius: 22px; background: #fffffff0; box-shadow: 0 20px 45px #2d4f3e29;
+  display: flex; flex-direction: column; align-items: center; color: #738079; text-align: center; font-size: 11px;
+}
+.paymentCard > span { display: grid; place-items: center; width: 48px; height: 48px; border-radius: 50%; background: #e8f5ed; margin-bottom: 12px; }
+.paymentCard strong { font: 700 19px/28.5px var(--font-manrope), sans-serif; color: #6a9b82; }
+.paymentCard small { color: var(--entry-green); background: var(--entry-mint); font-size: 9px; font-weight: 700; border-radius: 12px; padding: 4px 8px; margin-top: 14px; }
+.benefits { min-height: 62px; margin-top: auto; padding: 15px 24px; display: flex; align-items: center; justify-content: center; gap: 48px; background: #152e24; color: #d4dfd9; font-size: 12px; }
+.benefits span { display: inline-flex; gap: 10px; align-items: center; }
+.benefits i { width: 18px; height: 18px; border-radius: 50%; display: grid; place-items: center; font-style: normal; color: #8ee0b5; background: #2c5948; }
+
+.role { background: var(--entry-paper); }
+.roleContent { width: min(100% - 48px, 864px); margin: 36px auto 0; padding-bottom: 40px; text-align: center; }
+.roleContent h1 { margin: 20px 0 17px; font-size: clamp(36px, 4.6vw, 57px); line-height: 1.08; letter-spacing: -.055em; font-weight: 700; }
+.roleSubtitle { color: #718078; font-size: 16px; }
+.roleCards { display: grid; grid-template-columns: 1fr 1fr; gap: 18px; margin: 34px 0 28px; }
+.roleCard { position: relative; display: grid; background: white; border: 1px solid #dce4dd; border-radius: 20px; text-align: left; min-height: 300px; }
+.roleCard[data-selected="true"] { transform: translateY(-3px); border-color: var(--entry-green); box-shadow: 0 16px 40px #2d4f3e1a; }
+.roleSelect { background: transparent; border: 0; padding: 62px 28px 12px; width: 100%; display: grid; justify-items: center; color: inherit; }
+.roleSelect > strong { margin-top: 30px; font: 700 20px/30px var(--font-manrope), sans-serif; }
+.roleSelect > span:last-of-type { margin-top: 8px; max-width: 310px; color: #77837c; font-size: 14px; line-height: 21.7px; }
+.roleIcon { justify-self: start; display: grid; place-items: center; width: 58px; height: 58px; border-radius: 14px; background: var(--entry-mint); }
+.roleSelect i { position: absolute; top: 22px; right: 22px; width: 22px; height: 22px; display: grid; place-items: center; border-radius: 50%; color: white; background: var(--entry-green); font-size: 11px; font-style: normal; }
+.roleShortcut { justify-self: start; display: flex; align-items: center; gap: 8px; border: 0; background: none; color: var(--entry-green); font-size: 13px; font-weight: 700; margin: 0 28px 26px; padding: 4px 0; }
+.roleContent > .primary { width: 210px; }
+.signInLink { color: #718078; font-size: 16px; margin-top: 16px !important; text-align: center; }
+.signInLink button { border: 0; background: transparent; padding: 0; font: inherit; font-weight: 700; }
+
+.account { display: grid; grid-template-columns: 46% 54%; background: white; }
+.accountFormPanel { width: min(100% - 48px, 450px); margin: 0 auto; padding: 32px 0 24px; }
+.accountFormPanel .header { height: 38px; }
+.formContent { margin-top: 42px; }
+.accountTag { display: inline-block; border-radius: 20px; padding: 7px 10px; color: var(--entry-green); background: #eaf5ee; font-size: 10px; font-weight: 800; text-transform: uppercase; letter-spacing: .8px; }
+.formContent h1 { margin: 15px 0 10px; font-size: 38px; line-height: 1.1; font-weight: 700; letter-spacing: -.055em; }
+.formSubtitle { color: #77827c; font-size: 14px; line-height: 21px; }
+.providers { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; margin-top: 27px; }
+.providers button { display: flex; align-items: center; justify-content: center; gap: 10px; min-height: 48px; border: 1px solid #dce3dd; border-radius: 10px; background: white; color: #27382f; font-size: 13px; font-weight: 600; padding: 8px; }
+.providers button:hover { background: #f7f9f7; }
+.google { color: #4285f4; font: 900 17px/1 Arial, sans-serif; }
+.walletIcon { display: grid; place-items: center; background: #15221c; color: white; border-radius: 5px; width: 20px; height: 20px; font-size: 19px; line-height: 1; }
+.notice { border-radius: 10px; padding: 10px 12px; margin-top: 12px !important; background: var(--color-warning-fill, #fff6dd); color: var(--color-warning-text, #7a5a00); font-size: 13px; }
+.separator { display: flex; align-items: center; gap: 12px; margin: 22px 0; font-size: 10px; line-height: 15px; color: #89958e; text-transform: uppercase; }
+.separator::before, .separator::after { content: ""; flex: 1; height: 1px; background: #e7eae7; }
+.fields { display: grid; gap: 16px; }
+.fields label { display: grid; gap: 7px; color: #3e4c45; font-size: 12px; line-height: 18px; font-weight: 600; }
+.fields input { border: 1px solid #dce3dd; border-radius: 9px; padding: 0 14px; width: 100%; min-width: 0; height: 47px; color: #21352c; background: #f8faf9; font: 400 13px var(--font-dm-sans), sans-serif; }
+.fields input::placeholder { color: #99a39d; }
+.names { display: grid; grid-template-columns: 1fr 1fr; gap: 12px; }
+.password { position: relative; }
+.password input { padding-right: 58px; }
+.password button { position: absolute; right: 12px; top: 50%; transform: translateY(-50%); border: 0; background: none; color: var(--entry-green); font-size: 11px; font-weight: 700; }
+.formContent .signInLink { margin-top: 21px !important; font-size: 14px; }
+.legal { margin-top: 33px !important; font-size: 9px; text-align: center; color: #8a9590; }
+.legal span { color: #66736c; text-decoration: underline; }
+.accountArtwork { position: relative; overflow: hidden; border-radius: 28px 0 0 28px; margin: 12px 12px 12px 0; min-height: 839px; background: radial-gradient(circle at 92% 10%, #215641, transparent 48%), #153d2e; }
+.accountArtwork[data-role="RIDER"] { background: radial-gradient(circle at 92% 10%, #26544e, transparent 48%), #193a46; }
+.accountCopy { position: relative; z-index: 1; padding: 86px 24px 0 clamp(34px, 7vw, 88px); }
+.accountCopy .eyebrow { font: 800 10px/15px var(--font-dm-sans), sans-serif; letter-spacing: 1.5px; color: #89d9af; }
+.accountCopy h2 { margin: 16px 0 16px; max-width: 488px; font-size: clamp(34px, 4vw, 50px); line-height: 1.12; font-weight: 600; letter-spacing: -.05em; color: white; }
+.accountCopy > p:last-child { color: #bfd0c7; max-width: 410px; font-size: 14px; line-height: 22.4px; }
+.accountMap { position: absolute; top: 58%; left: 10%; width: 622px; height: 534px; overflow: hidden; background: #e8f4ec1f; }
+.accountPath { position: absolute; top: 0; left: 0; }
+.accountArtwork[data-role="RIDER"] .accountPath { top: -78px; left: -30px; }
+.accountMap .endPin { left: 508px; top: 67px; width: 34px; height: 34px; }
+.accountMap .endPin::before { inset: -13px; }
+.accountBike { top: 81px; left: 232px; width: 114px; height: 114px; border-radius: 50%; border-width: 7px; }
+.accountMap .deliveryCard { top: 237px; left: 159px; width: 355px; box-shadow: none; }
+.accountArtwork[data-role="RIDER"] .accountBike { top: 83px; left: 198px; width: 116px; height: 116px; }
+.accountArtwork[data-role="RIDER"] .deliveryCard { top: 249px; left: 174px; }
+
+.ready { display: grid; place-items: center; background: #153b2d; padding: 24px; }
+.readyCard { width: min(100%, 520px); display: grid; justify-items: center; padding: 62px 42px; text-align: center; background: white; border-radius: 28px; box-shadow: 0 24px 65px #082c2540; }
+.readyCheck { display: grid; place-items: center; width: 76px; height: 76px; border-radius: 50%; background: #e8f5ed; color: var(--entry-green); font-size: 32px; margin-bottom: 28px; }
+.readyCard h1 { margin: 20px 0 14px; font-size: 43px; line-height: 1.5; letter-spacing: -.055em; font-weight: 700; }
+.readyCard > p:not(.eyebrow) { max-width: 396px; color: #758079; font-size: 16px; line-height: 25.6px; }
+.readyCard .primary { margin-top: 28px; }
+
+.splash { position: relative; overflow: hidden; display: grid; place-items: center; background: #123a2b; text-align: center; color: white; }
+.splashArtwork { position: absolute; inset: 0; overflow: hidden; }
+.splashArtwork img { position: absolute; }
+.splashBackground { inset: 50% auto auto 50%; transform: translate(-50%, -50%); }
+.splashTop { left: 62.8%; top: -33.3%; }
+.splashBottom { left: -16.7%; top: 58.3%; }
+.splashPath { left: 50%; top: 63.8%; transform: translateX(-50%); }
+.splashContent { position: relative; margin-top: -5px; width: min(92%, 380px); }
+.splashIcon { display: grid; place-items: center; width: 104px; height: 104px; border: 10px solid #2a4c3f; border-radius: 34px; background: #1f8a5b; margin: 0 auto 34px; }
+.splashContent h1 { font-size: 52px; line-height: 1.12; font-weight: 700; }
+.splashContent strong { color: #bfd9ca; font-size: 22px; line-height: 1.3; }
+.splashContent p { color: #bfd9ca; opacity: .85; max-width: 320px; margin: 12px auto 0; font-size: 16px; font-weight: 700; line-height: 24px; }
+.splashFooter { position: absolute; bottom: 5%; display: grid; justify-items: center; gap: 14px; }
+.splashProgress, .splashBadge { position: relative; display: block; }
+.splashProgress img + img { position: absolute; top: 0; left: 0; }
+.splashBadge span { position: absolute; inset: 0; display: grid; place-items: center; font-size: 12px; font-weight: 700; }
+
+@media (max-width: 1000px) {
+  .introContent { padding-bottom: 54px; }
+  .introCopy h1 { font-size: clamp(35px, 5vw, 50px); }
+  .introDescription { font-size: 15px; line-height: 1.6; }
+  .accountFormPanel { width: calc(100% - 42px); }
+  .accountMap { left: 3%; }
+  .accountMap .deliveryCard { left: 18px; width: 290px; }
+  .accountArtwork[data-role="RIDER"] .deliveryCard { left: 18px; }
+}
+
+@media (max-width: 720px) {
+  .intro > .header, .role > .header { height: 72px; padding-inline: 24px; }
+  .introContent { grid-template-columns: 1fr; padding: 22px 24px 30px; gap: 20px; }
+  .introCopy h1 { font-size: clamp(36px, 8vw, 49px); margin: 12px 0 16px; }
+  .introActions { margin-top: 22px; }
+  .introArtwork { width: min(100%, 540px); margin-inline: auto; }
+  .benefits { gap: 12px 24px; flex-wrap: wrap; }
+  .roleContent { margin-top: 20px; }
+  .roleCards { grid-template-columns: 1fr; gap: 14px; }
+  .roleCard { min-height: 200px; }
+  .roleSelect { padding-top: 20px; }
+  .roleSelect > strong { margin-top: 10px; }
+  .roleShortcut { margin-bottom: 14px; }
+  .account { grid-template-columns: 1fr; }
+  .accountFormPanel { width: min(100% - 48px, 450px); }
+  .accountArtwork { display: none; }
+  .formContent { margin-top: 28px; }
+  .formContent h1 { font-size: 34px; }
+}
