@@ -138,3 +138,5 @@ Use Freighter sign-in, address-based discovery, manual delivery status updates,
 and escrow transaction history. Defer Google/email sign-in, maps and live GPS,
 ETAs and distance matching, messaging, notifications, document uploads, saved
 addresses, wallet balances and standalone deposit/send/withdraw flows.
+
+- [x] Replace the starter favicon with the Tuma Ride logo and verify it is served by the production build.
